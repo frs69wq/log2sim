@@ -14,8 +14,8 @@ cat <<EOT > $output
 <html>
 <head>
     <title>Summary of $workflow_dir</title>
-    <script src="../../html/tabcontent.js" type="text/javascript"></script>
-    <link href="../../html/template1/tabcontent.css" rel="stylesheet" type="text/css" />
+    <script src="../../utilstabcontent.js" type="text/javascript"></script>
+    <link href="../../utils/tabcontent.css" rel="stylesheet" type="text/css" />
     <style>
         table, th, td {
         border: 1px solid black;
