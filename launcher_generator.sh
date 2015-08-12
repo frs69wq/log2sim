@@ -80,7 +80,9 @@ do
     echo  'java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar VIPSimulator \
       simgrid_files/platform_'${workflow_dir}'_'${platform_type}'.xml simgrid_files/'${deployment_file}' \
       '${total_particle_number}' '${number_of_gate_jobs}' '${gate_input_file}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}'\
-      '${log_file}' ${verbose}  > timings/simulated_time_on_'${platform_type}'.csv'  >> $output 
+      '${log_file}' ${verbose}' \
+      '1> timings/simulated_time_on_'${platform_type}'.csv' \
+      '2>csv_files/simulated_file_transfer_on_'${platform_type}'.csv'  >> $output 
 
     echo -e "\n" >> $output
 done 
