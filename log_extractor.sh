@@ -166,9 +166,9 @@ do
     if [[ $filesize =~ ^[0-9]+$ ]] && [[ $filename != "DownloadCommand" ]]
     then
        echo "inputs/$filename,$filesize,$se" >> $file_info;
-    else
-       { rm -f $file_info && awk -F',' -v n="$filename" -v s="$se" '{if (match($1,n) && !match($3,s)){sub($3,$3":"s,$3);gsub(" ",",",$0)}}1' > $file_info;} < $file_info ;
     fi
+  else
+       { rm -f $file_info && awk -F',' -v n="$filename" -v s="$se" '{if (match($1,n) && !match($3,s)){sub($3,$3":"s,$3);gsub(" ",",",$0)}}1' > $file_info;} < $file_info ;
   fi
 done
 
