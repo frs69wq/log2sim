@@ -180,7 +180,7 @@ done
 if [ ! -f "$job_times" ]
 then
     info "\t\tFile $job_times does not exist. Create it."
-    echo "JobId,GASDowntime,Downtime,GASUpTime,UpTime,ExecutionTime,TotalTime" > $job_times
+    echo "JobId,GASDownTime,DownTime,GASUpTime,UpTime,ExecutionTime,TotalTime" > $job_times
 fi
 
 job_total_time=$(awk '/] Total running time:/''{print}' $input_log | \
