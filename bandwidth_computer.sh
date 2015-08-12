@@ -33,8 +33,8 @@ fi
 
 
 tail -n +2 $transfers | \
-  awk -F',' '{gsub("ms","",$5); \
-    if ($4 > "0") { \
+  awk -F',' \
+    'if ($4 > "0") { \
        bw=$4/$5; \
        if ($NF == "0") {\
          if (! ($3 in se)) {se[$3]}; \
