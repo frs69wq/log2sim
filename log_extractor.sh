@@ -71,6 +71,7 @@ suffix=$(echo $machine_name | awk -F '.' '{print $NF}')
 if ! grep -q "$suffix" internet_suffixes.txt ; then
      new_name=$(grep $machine_name.[a-zA-Z]'\+' $hosts_name_db | uniq)
      machine_name=$new_name
+     suffix=$(echo $machine_name | awk -F'.' '{print $NF}')
 fi
 
 #get the number of CPU cores and put it in a local variable
