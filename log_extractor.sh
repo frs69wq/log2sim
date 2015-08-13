@@ -38,15 +38,17 @@ job_id=$(awk -F'=' '/^JOBID=/''{print $2}' $input_log)
 if [ ! -f "$machine_info" ]
 then
     info "\t\tFile $machine_info does not exist. Create it."
-    echo "Timestamp,Name,Core,MIPS,NetSpeed,Country,CloseSE" > $machine_info
+    echo "Timestamp,Name,Core,MIPS,NetSpeed,SiteName,Country,CloseSE" > $machine_info
 fi
 #information about each column in the file machine_info
 #TIMESTAMP:
 #NAME: name of worker element on grid
 #CORE: number of CPU core 
 #MIPS: CPU bogomips
-#NETSPEED: speed of network interface 
+#NETSPEED: speed of network interface
+#SITE_NAME: grid site to which the worker node belongs
 #COUNTRY: country where the machine is located. for example:nl->Netherlands
+#CLOSE_SE: the preferred Storage Element where results are uploaded
 
 #optional fields (not used now)
 #CACHE:CPU cache
@@ -83,16 +85,19 @@ if [ "${net_interface_speed}" == "" ]
 then 
     net_interface_speed="1000Mbps"
 fi
-    
-#Default SE of Worker Node
+
+#grid site
+site=$(awk -F'=' '/^SITE_NAME/ {print $NF}' $input_log)
+
+#close SE of Worker Node
 dpm_host=$(awk -F'=' '/^DPM_HOST/ {print $NF}' $input_log)
-default_SE=$(awk -F'=' '/^VO_BIOMED_DEFAULT_SE/ {print $NF}' $input_log)
-if [ $default_SE == "DPM_HOST" ] || [ "${default_SE}" == "" ]
+close_SE=$(awk -F'=' '/^VO_BIOMED_DEFAULT_SE/ {print $NF}' $input_log)
+if [ $close_SE == "DPM_HOST" ] || [ "${close_SE}" == "" ]
 then 
-    default_SE=$dpm_host
+    close_SE=$dpm_host
 fi
 
-full_info=$(echo "$machine_name,$cpu_core_nb,${cpu_bogomips}Mf,$net_interface_speed,$suffix,$default_SE")
+full_info=$(echo "$machine_name,$cpu_core_nb,${cpu_bogomips}Mf,$net_interface_speed,$site,$suffix,$close_SE")
 
 #write informations in the file: machine_info
 if ! grep -q $full_info $machine_info ; then
@@ -154,7 +159,7 @@ fi
 array_file_info=($(awk '/] lcg-cp -v --connect-timeout/{nr[NR]; nr[NR+2]}; NR in nr' $input_log | \
     awk -F'/' '{print $NF}' | awk 'NR%2{printf $0" ";next;}1' | \
     awk -F'/' '{gsub("="," ",$0); gsub(/\[.*.\]/,"",$0);print}' | \
-    awk '{printf $1","$9; if ($2 == "DownloadCommand") print ","$5; else print ",'$default_SE'"}'))
+    awk '{printf $1","$9; if ($2 == "DownloadCommand") print ","$5; else print ",'$close_SE'"}'))
 
 for fl in "${array_file_info[@]}" 
 do
