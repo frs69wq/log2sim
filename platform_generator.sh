@@ -84,7 +84,7 @@ for line in `tail -n +2 $worker_nodes | sort -t\, -k1rn | awk -F, '!a[$2]++'`
 do   
     worker=$(echo $line | awk -F',' '{print \
         "\\t<host id=\""$2"\" power=\""$4"\" core=\""$3"\">\\n" \
-        "\\t\\t <prop id=\"closeSE\" value=\"" $7 "\"/>\\n" \
+        "\\t\\t <prop id=\"closeSE\" value=\"" $NF "\"/>\\n" \
         "\\t</host>\\n"\
         "\\t<link id=\""$2"_link\" bandwidth=\""$5"\" latency=\"1ns\"/>\\n" \
         "\\t<host_link id=\""$2"\" up=\""$2"_link\" down=\""$2"_link\"/>\\n"}')
