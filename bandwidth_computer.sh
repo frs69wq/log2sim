@@ -35,7 +35,7 @@ fi
 tail -n +2 $transfers | \
   awk -F',' '{if ($4 > "0") { \
        bw=$4/$5; \
-       if ($NF == "0") {\
+       if ($NF == "1" && $4 > "20") {\
          if (! ($3 in se)) {se[$3]}; \
          download_count[$3]+=1; \
          total_bw[$3] += bw; \
@@ -43,13 +43,15 @@ tail -n +2 $transfers | \
          total_download_bw[$3] += bw; \
          if (bw > max_download_bandwidth[$3]){max_download_bandwidth[$3]=bw};\
        } else {\
-         if (!($2 in se)){se[$2]}; \
-         upload_count[$2]+=1; \
-         total_bw[$2] += bw; \
-         if (bw > max_bandwidth[$2]){max_bandwidth[$2]=bw};\
-         total_upload_bw[$2] += bw; \
-         if (bw > max_upload_bandwidth[$2]){max_upload_bandwidth[$2]=bw};\
-       } \
+         if ($NF == "2") {\
+           if (!($2 in se)){se[$2]}; \
+             upload_count[$2]+=1; \
+             total_bw[$2] += bw; \
+             if (bw > max_bandwidth[$2]){max_bandwidth[$2]=bw};\
+             total_upload_bw[$2] += bw; \
+             if (bw > max_upload_bandwidth[$2]){max_upload_bandwidth[$2]=bw};\
+           }\
+         } \
     }} END { \
       for (id in se) {\
          printf id","(total_bw[id]/(download_count[id]+upload_count[id]))","\

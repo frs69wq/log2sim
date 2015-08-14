@@ -128,22 +128,23 @@ fi
 #DESTINATION: destination of transfer
 #FILESIZE: size of transferred file
 #TIME: elapsed time to transfer the file 
-#UpDown: type of transfer, i.e., Download or Upload
-# get information about upload transfers 
+#UpDown: type of transfer, i.e., UploadTest(0), Upload(1), Download(2), or Replication(3)
+
+# get information about upload(test) transfers 
 upload_time=$(awk '/] UploadCommand=lcg-cr/' $input_log | \
     awk -F"Source=" '{gsub("="," ",$2); print $2}' | \
-    awk '{gsub(/:.*/,"",$1); gsub(/:.*/,"",$3); gsub("ms","",$7);print '$job_id' ",'$machine_name',"$3","$5","$7",0"}' | tee -a $transfer_info | awk -F',' '{total_time+=$5;}END{print total_time/1000}')
+    awk '{gsub(/:.*/,"",$1); gsub(/:.*/,"",$3); gsub("ms","",$7);printf '$job_id' ",'$machine_name',"$3","$5","$7","; if ($5==12) {print "0"} else {print "1"}}' | tee -a $transfer_info | awk -F',' '{total_time+=$5;}END{print total_time/1000}')
 
 # get information about download transfers 
 download_time=$(awk '/] DownloadCommand=lcg-cp/' $input_log | awk -F"Source=" '{print $2}'| \
     awk -F"Destination=" '{count=split($1,a," "); gsub("="," ",$2);gsub("Size"," ",$2);gsub("Time"," ",$2); print a[count]" "$2}' | \
-    awk -F' ' '{ gsub("ms","",$4);print '$job_id' "," $1",'$machine_name',"$3","$4  ",1"}' |\
+    awk -F' ' '{ gsub("ms","",$4);print '$job_id' "," $1",'$machine_name',"$3","$4  ",2"}' |\
 tee -a $transfer_info | awk -F',' '{total_time+=$5;}END{print total_time/1000}')
 
 # get information about replication transfers
 awk '/] UploadCommand=lcg-rep/' $input_log | awk -F"Source=" '{print $2}'| \
     awk -F"Destination=" '{count=split($1,a," "); gsub("="," ",$2); print a[count]" "$2}' | \
-    awk '{gsub(/:.*/,"",$1); gsub(/:.*/,"",$3); print '$job_id' "," $1 ","$3","$5","$7",2"}' >> $transfer_info 
+    awk '{gsub(/:.*/,"",$1); gsub(/:.*/,"",$3); print '$job_id' "," $1 ","$3","$5","$7",3"}' >> $transfer_info 
 
 
 # Extract information related to input files
