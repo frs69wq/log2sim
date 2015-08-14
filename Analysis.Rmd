@@ -1,0 +1,158 @@
+---
+title: "Workflow Statistics"
+output: pdf_document
+---
+
+```{r echo=FALSE}
+library(scales)
+library(reshape2)
+library(ggplot2)
+```
+
+## Statistics on Worker Nodes
+```{r echo=FALSE}
+workers <- read.csv('csv_files/worker_nodes.csv', header=TRUE, sep=',')
+workers$MIPS <-as.numeric(sub("Mf", "", workers$MIPS))
+```
+
+### Distibution of Worker Nodes by Country
+
+```{r echo=FALSE, fig.height=3.5}
+ggplot(workers, aes(factor(Country))) + geom_bar(aes(fill= ..count..)) + guides(fill=FALSE) +
+    xlab("Country") + ylab("Number of worker nodes")
+```
+
+### With a split by number of cores
+
+```{r echo=FALSE, fig.height=4}
+ggplot(workers, aes(x=Country, fill=factor(Core))) + geom_bar() + scale_fill_discrete(name="#Cores") +
+  xlab("Country") + ylab("Number of worker nodes") + theme(legend.position="top")
+```
+
+### Split by BogoMIPS and Country
+
+```{r echo=FALSE, fig.height=3.5}
+ggplot(workers, aes(x=round(MIPS, -2), fill=factor(Country))) + geom_bar(binwidth=100) +
+  xlab("BogoMIPS") + ylab("Number of worker nodes")+ scale_fill_discrete(name="Country") +
+  theme(legend.position="top")
+```
+
+### CloseSE vs. Grid Site by country
+
+```{r echo=FALSE, fig.height=5.25}
+workers$SESuffix<-sapply(workers$CloseSE, function(x) tail(strsplit(as.character(x),"[.]")[[1]], n=1))
+ggplot(workers,aes(x=SiteName, y=CloseSE)) + geom_point()+ facet_grid(SESuffix~Country, scales="free") +
+  theme(axis.text.x = element_text(angle = 50, hjust = 1)) + xlab("Grid Site") 
+```
+
+### Distribution of Worker nodes by Grid Site
+
+```{r echo=FALSE, fig.height=4}
+ggplot(workers, aes(factor(SiteName))) + geom_bar(aes(fill= ..count..)) + guides(fill=FALSE) + 
+  facet_wrap(~Country, scales="free_x", nrow=1) + theme(axis.text.x = element_text(angle = 50, hjust = 1)) + 
+  xlab("Grid Site") + ylab("Number of worker nodes")
+```
+
+### With a split by number of cores
+
+```{r echo=FALSE, fig.height=4.75}
+ggplot(workers, aes(x=SiteName, fill=factor(Core))) + geom_bar() + scale_fill_discrete(name="#Cores") + 
+  facet_wrap(~Country, scales="free_x", nrow=1) + theme(axis.text.x = element_text(angle = 50, hjust = 1)) + 
+  xlab("Grid Site") + ylab("Number of worker nodes") + theme(legend.position="top")
+```
+
+## Statistics on file transfers
+```{r echo=FALSE}
+transfers <- read.csv('csv_files/file_transfer.csv', header = TRUE, sep=',')
+
+# Remove entry with 0 file size
+transfers = transfers[transfers$FileSize!=0,]
+
+# Simplify the job IDs
+transfers$JobId <- transfers$JobId-min(transfers$JobId)
+
+# Remove the upload that corresponds to the number of particules made by the Merge job
+uploads <- transfers[transfers$FileSize > 20 & transfers$UpDown == 1,]
+```
+### Distribution of Upload Test durations (in milliseconds)
+```{r echo=FALSE}
+upload_tests <- transfers[transfers$UpDown == 0,]
+upload_tests$src_suffix<-sapply(upload_tests$Source, function(x) tail(strsplit(as.character(x),"[.]")[[1]], n=1))
+upload_tests$dst_suffix<-sapply(upload_tests$Destination, function(x) tail(strsplit(as.character(x),"[.]")[[1]], n=1))
+
+upload_tests$short_long = 
+  sapply(upload_tests$Time, function(x) if (x > 1500) {"Long"} else {"Short"})
+# Have the facet in the logical order rather than in the alphabetical one
+upload_tests$short_long = factor(upload_tests$short_long, levels = c("Short", "Long"))
+```
+```{r echo=FALSE}
+summary(upload_tests$Time)
+```
+
+### By Job Id
+```{r echo=FALSE,fig.height=3.25}
+ggplot(upload_tests, aes(x=JobId, y=Time)) + geom_point() + 
+  facet_wrap(~short_long, scales="free_y") + 
+  ylab ("Duration (in milliseconds)") + xlab ("Job ID")
+```
+
+### By Destination (darkness represents frequency)
+```{r echo=FALSE,fig.height=4}
+ggplot(upload_tests, aes(x=Time, y=Destination)) + geom_point(alpha=0.2, size=3) +
+  theme(axis.text.x = element_text(angle = 50, hjust = 1)) + #theme_bw() +
+  xlab ("Duration (in milliseconds)") + facet_grid(dst_suffix~., scales="free")
+```
+
+### Impact of Source and Destination countries on "Long" Upload Tests
+```{r echo=FALSE}
+ggplot(upload_tests[upload_tests$short_long == "Long",], 
+       aes(x=Source, y=Destination, color=factor(Time),size=factor(Time))) + 
+  geom_point() + facet_grid(src_suffix~dst_suffix, scales="free") +
+  scale_color_discrete(name="Duration") + scale_size_discrete(name="Duration") + 
+  theme(axis.text.x = element_text(angle = 50, hjust = 1))
+```
+
+\newpage
+
+### Distribution of Download durations (in seconds)
+```{r echo=FALSE}
+downloads <- transfers[transfers$UpDown == 2,]
+# Convert durations in seconds 
+downloads$Time<-downloads$Time/1000
+```
+```{r echo=FALSE}
+summary(downloads$Time)
+```
+
+### blah
+```{r echo=FALSE,fig.height=8}
+ggplot(downloads, aes(x=JobId, y=Source, size=Time)) + geom_point() + 
+  scale_size_continuous(name="Duration", breaks=c(seq(0,40,by=10), 
+                                                  seq(50, max(round(downloads$Time)), 
+                                                      by=50)), 
+                        range=c(1,6)) +
+  facet_wrap(~FileSize, ncol=1, scales="free_y") + 
+  ylab ("Source SE") + xlab ("Job ID")
+
+```
+
+### blah
+```{r echo=FALSE,fig.height=8}
+ggplot(downloads, aes(x=JobId, y=factor(FileSize), size=Time)) + geom_point() + 
+  scale_size_continuous(breaks=c(seq(0, max(round(downloads$Time)), 
+                                     by=50)), 
+                        range=c(1,6), name="Duration") +
+  facet_wrap(~Source, ncol=1, scales="free_y") + 
+  ylab ("File Size (in Bytes)") + xlab ("Job ID")
+
+```
+
+\newpage
+
+```{r}
+bandwidths <-read.csv('csv_files/se_bandwidth.csv', header=TRUE, sep=',')
+timings <- read.csv('timings/real_times.csv', header = TRUE, sep = ',') 
+
+```
+
+
