@@ -126,7 +126,7 @@ summary(downloads$Time)
 ```
 
 ### Source SE vs. Job Id for each File Size
-```{r echo=FALSE,fig.height=8}
+```{r echo=FALSE,fig.height=8}../../scripts/Analysis.Rmd
 ggplot(downloads, aes(x=JobId, y=Source, size=Time)) + geom_point() + 
   scale_size_continuous(name="Duration", breaks=c(seq(0,40,by=10), 
                                                   seq(50, max(round(downloads$Time)), 
@@ -227,7 +227,7 @@ bandwidths_no_lat$SE <- factor(bandwidths_no_lat$SE,
 
 ```{r echo=FALSE, fig.height=4}
 ggplot(bandwidths_no_lat, aes(x=SE, y=Bandwidth, shape=Direction)) + 
-  geom_point(size=2.5, color=hue_pal()(2)[2]) + scale_y_log10() + 
+  geom_point(size=2.5, color=hue_pal()(2)[1]) + scale_y_log10() + 
   facet_grid(Type~., scales="free") +
   ylab ("Bandwidth (in KBps)") + xlab ("Storage Element") + 
   scale_shape_manual(breaks=c("UP","DOWN"), labels=c("From", "To"), values=c(17,25))+
