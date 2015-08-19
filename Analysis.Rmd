@@ -126,7 +126,7 @@ summary(downloads$Time)
 ```
 
 ### Source SE vs. Job Id for each File Size
-```{r echo=FALSE,fig.height=8}../../scripts/Analysis.Rmd
+```{r echo=FALSE,fig.height=8}
 ggplot(downloads, aes(x=JobId, y=Source, size=Time)) + geom_point() + 
   scale_size_continuous(name="Duration", breaks=c(seq(0,40,by=10), 
                                                   seq(50, max(round(downloads$Time)), 
