@@ -198,8 +198,8 @@ upload_duration_gasw=$(awk '/] Results upload time:/''{print}' $input_log | \
 total_time=$(awk '/] Total running time:/''{print}' $input_log | \
     awk '{print $(NF-1)}')
 
-dde="${download_duration},${download_duration_gasw},${execution_time}"
-uptt="${upload_duration},${upload_duration_gasw},${total_time}" 
+dde="${download_duration_gasw},${download_duration},${execution_time}"
+uptt="${upload_duration_gasw},${upload_duration},${total_time}" 
 
 awk -F'|' -v dde=$dde -v uptt=$uptt \
     /$job_id/'{print $1","$3","$4","$5","dde","$6","uptt}' $sql_results \
