@@ -54,15 +54,21 @@ db_name=$(basename ${log_dir}/${workflow_dir}/db/*.h2.db .h2.db)
 
 # Create an SQL query to retrieve the names of worker from the VIP database
 # Allows us to reconstruct broken names recovered from log files.
-sql_get_jobs_info="SELECT node_name FROM jobs WHERE node_NAME IS NOT null"
+sql_get_jobs_info="SELECT ID, NODE_NAME,
+DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), QUEUED) as CREATION_TIME,
+DATEDIFF('SECOND',QUEUED, DOWNLOAD) as QUEUING_TIME,
+DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), DOWNLOAD) as START_DOWNLOAD, 
+DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), UPLOAD) as START_UPLOAD 
+from JOBS WHERE UPLOAD IS NOT NULL AND STATUS='COMPLETED' ORDER BY ID"
 
 # Submit the SQL query to H2. 
 # Redirect output in a temporary "host_names.txt" file.
 java -cp ${db_driver} org.h2.tools.Shell \
      -url "jdbc:h2:${log_dir}/${workflow_dir}/db/$db_name" \
-     -user gasw -password gasw -sql "$sql_get_jobs_info" > hosts_name.txt || \
-info "SQL query failed."
+     -user gasw -password gasw -sql "$sql_get_jobs_info" > sql_results.txt \
+|| info "SQL query failed."
 
+sed s/' '//g -i sql_results.txt
 
 ##############################################################################
 #                                                                            #
@@ -76,7 +82,7 @@ $(ls -l ${log_dir}/${workflow_dir}/out/*.sh.out | wc -l) log files"
 
 for log_file in  `ls ${log_dir}/${workflow_dir}/out/*.sh.out`; do
     info "\tParsing  $log_file ..."
-    ./log_extractor.sh $log_file ${LFC_catalog} hosts_name.txt
+    ./log_extractor.sh $log_file ${LFC_catalog} sql_results.txt
 done
 
 ###  Sanity check ###
@@ -92,7 +98,6 @@ then
     echo "inputs/gate.sh.tar.gz,73043,$defSE" >> $LFC_catalog
 fi
 
-rm -f hosts_name.txt
 info "End of log file extraction."
 info "\t Worker nodes: $worker_nodes ... created."
 info "\t File transfers: $file_transfer ... created."
@@ -203,7 +208,8 @@ mv -f simulate_*.sh *.html README $output_dir/
 mv -f *.xml  $LFC_catalog $output_dir/simgrid_files
 mv -f $worker_nodes $file_transfer $se_bandwidth $output_dir/csv_files
 mv -f $real_times $output_dir/timings
- 
+
+#rm -f sql_results.txt
 #Generate application file.
 #  info "Generating application file ..."
 #  FLE_APPLICATION="Application_${workflow_dir}.txt"

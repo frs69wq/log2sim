@@ -121,7 +121,7 @@ do
 	wn_name=$(echo $line | awk '{print $3}')
 	jobid=$(echo $line | awk '{print $9}')
 	echo -e "\t\t<argument value=\""$jobid"\"/>" >> $output_file 
-	awk -F',' '/'${jobid}'/ {print "\t\t<argument value=\"" $4 "\"/>"}' $job_times >> $output_file
+	awk -F',' '/'${jobid}'/ {print "\t\t<argument value=\"" $7 "\"/>"}' $job_times >> $output_file
 	# the $4>20 is to discard the upload of the number of particules to 
 	# merge by the Merge job (typically of size=11)
 	awk -F',' '/'${jobid}'/ {if ($NF == "1" && $4 >20) 

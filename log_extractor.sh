@@ -15,7 +15,7 @@ cd $(dirname $0)
 
 input_log=${1:? please give log file name}
 file_info=${2:-input_files_info.csv}
-hosts_name_db=${3:? hosts name file is mandatory}
+sql_results=${3:? hosts name file is mandatory}
 machine_info="worker_nodes.csv"
 transfer_info="file_transfer.csv"
 job_times="real_times.csv"
@@ -65,11 +65,11 @@ machine_name=$(awk '/uname/{getline; print $2}' $input_log)
 
 # Checking the host name format. 
 # Test if the suffix of the host name has a match in internet_suffixes.txt
-#If it misses a proper suffix, we use the VIP database to complete the name.
+# If it misses a proper suffix, we use the VIP database to complete the name.
 suffix=$(echo $machine_name | awk -F '.' '{print $NF}')
 
 if ! grep -q "$suffix" internet_suffixes.txt ; then
-     new_name=$(grep $machine_name.[a-zA-Z]'\+' $hosts_name_db | uniq)
+     new_name=$(grep $machine_name $sql_results | cut -d'|' -f 2 | sed s/' '//g | uniq)
      machine_name=$new_name
      suffix=$(echo $machine_name | awk -F'.' '{print $NF}')
 fi
@@ -131,12 +131,12 @@ fi
 #UpDown: type of transfer, i.e., UploadTest(0), Upload(1), Download(2), or Replication(3)
 
 # get information about upload(test) transfers 
-upload_time=$(awk '/] UploadCommand=lcg-cr/' $input_log | \
+upload_duration=$(awk '/] UploadCommand=lcg-cr/' $input_log | \
     awk -F"Source=" '{gsub("="," ",$2); print $2}' | \
     awk '{gsub(/:.*/,"",$1); gsub(/:.*/,"",$3); gsub("ms","",$7);printf '$job_id' ",'$machine_name',"$3","$5","$7","; if ($5==12) {print "0"} else {print "1"}}' | tee -a $transfer_info | awk -F',' '{total_time+=$5;}END{print total_time/1000}')
 
 # get information about download transfers 
-download_time=$(awk '/] DownloadCommand=lcg-cp/' $input_log | awk -F"Source=" '{print $2}'| \
+download_duration=$(awk '/] DownloadCommand=lcg-cp/' $input_log | awk -F"Source=" '{print $2}'| \
     awk -F"Destination=" '{count=split($1,a," "); gsub("="," ",$2);gsub("Size"," ",$2);gsub("Time"," ",$2); print a[count]" "$2}' | \
     awk -F' ' '{ gsub("ms","",$4);print '$job_id' "," $1",'$machine_name',"$3","$4  ",2"}' |\
 tee -a $transfer_info | awk -F',' '{total_time+=$5;}END{print total_time/1000}')
@@ -187,15 +187,20 @@ done
 if [ ! -f "$job_times" ]
 then
     info "\t\tFile $job_times does not exist. Create it."
-    echo "JobId,GASDownTime,DownTime,GASUpTime,UpTime,ExecutionTime,TotalTime" > $job_times
+    echo "JobId,CreationTime,QueuingTime,DownloadStartTime,DownloadDuration_GASW,DownloadDuration,ExecutionTime,UploadStartTime,UploadDuration_GASW,UploadDuration,TotalTime" > $job_times
 fi
 
-job_total_time=$(awk '/] Total running time:/''{print}' $input_log | \
+download_duration_gasw=$(awk '/] Input download time:/''{print}' $input_log | \
     awk '{print $(NF-1)}')
-gasw_download_time=$(awk '/] Input download time:/''{print}' $input_log | \
-    awk '{print $(NF-1)}')
-gasw_upload_time=$(awk '/] Results upload time:/''{print}' $input_log | \
+execution_time=$(awk '/] Execution time:/''{print}' $input_log | awk '{print $(NF-1)}')
+upload_duration_gasw=$(awk '/] Results upload time:/''{print}' $input_log | \
     awk '{print $(NF-1)}')    
-job_execute_time=$(awk '/] Execution time:/''{print}' $input_log | awk '{print $(NF-1)}')
+total_time=$(awk '/] Total running time:/''{print}' $input_log | \
+    awk '{print $(NF-1)}')
 
-echo "$job_id,$gasw_download_time,$download_time,$gasw_upload_time,$upload_time,$job_execute_time,$job_total_time" >> $job_times   
+dde="${download_duration},${download_duration_gasw},${execution_time}"
+uptt="${upload_duration},${upload_duration_gasw},${total_time}" 
+
+awk -F'|' -v dde=$dde -v uptt=$uptt \
+    /$job_id/'{print $1","$3","$4","$5","dde","$6","uptt}' $sql_results \
+>> $job_times
