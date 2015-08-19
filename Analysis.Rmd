@@ -1,5 +1,5 @@
 ---
-title: "Workflow Statistics"
+title: "WORKFLOW_NAME Statistics"
 output: pdf_document
 ---
 

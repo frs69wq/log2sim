@@ -164,7 +164,7 @@ info "\tLauncher: simulate_$workflow_dir.sh ... created."
 ##############################################################################
 echo -e "Data for $workflow_dir originally produced on: "$(date +"%D %T")"\n
 Directory organization:
-\t./ -> simulate_$workflow_dir.sh ${workflow_dir}_summary.html README
+\t./ -> simulate_$workflow_dir.sh ${workflow_dir}_summary.html Analysis_${workflow_dir}.Rmd README
 \tcsv_files/ -> $worker_nodes $file_transfer $se_bandwidth
 \tsimgrid_files/ -> XML files and $LFC_catalog
 \ttimings/ -> $real_times\n
@@ -187,6 +187,13 @@ info "\tHTML Summary: ${workflow_dir}_summary.html ... created"
 
 ##############################################################################
 #                                                                            #
+#                             Analysis File                                  #
+#                                                                            #
+##############################################################################
+sed s/WORKFLOW_NAME/$workflow_dir/g Analysis.Rmd > Analysis_$workflow_dir.Rmd
+
+##############################################################################
+#                                                                            #
 #                             Moving files                                   #
 #                                                                            #
 ##############################################################################
@@ -201,12 +208,12 @@ then
     mkdir $output_dir/timings
 fi
 info "\t$output_dir -> simulate_$workflow_dir.sh"\
-     " ${workflow_dir}_summary.html README"
+     " ${workflow_dir}_summary.html README Analysis_${workflow_dir}.Rmd"
 info "\t$output_dir/csv_files/ -> $worker_nodes $file_transfer $se_bandwidth"
 info "\t$output_dir/simgrid_files/ -> XML files and $LFC_catalog"
 info "\t$output_dir/timings/ -> $real_times"
 
-mv -f simulate_*.sh *.html README $output_dir/
+mv -f simulate_*.sh *.html Analysis_$workflow_dir.Rmd README $output_dir/
 mv -f *.xml  $LFC_catalog $output_dir/simgrid_files
 mv -f $worker_nodes $file_transfer $se_bandwidth $output_dir/csv_files
 mv -f $real_times $output_dir/timings
