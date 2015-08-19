@@ -85,6 +85,8 @@ for log_file in  `ls ${log_dir}/${workflow_dir}/out/*.sh.out`; do
     ./log_extractor.sh $log_file ${LFC_catalog} sql_results.txt
 done
 
+rm -f sql_results.txt
+
 ###  Sanity check ###
 # Assume that inputs/gate.sh.tar.gz and
 # inputs/opengate_version_7.0.tar.gz are at least stored on
