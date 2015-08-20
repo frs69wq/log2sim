@@ -43,13 +43,13 @@ header="<?xml version='1.0'?>\n<!DOCTYPE platform SYSTEM
 as_tag="<AS id=\"AS_"${workflow_dir}"\" routing=\""$routing"\">\n"
 
 # VIP Server
-server="\t<host id=\""$master"\" power=\"100Gf\" core=\"4\"/>\n
+server="\t<host id=\""$master"\" power=\"5Gf\" core=\"4\"/>\n
 \t<link id=\""$master"_link\" bandwidth=\"10Gbps\" latency=\"1ns\"/>\n
 \t<host_link id=\""$master"\" up=\""$master"_link\" 
 down=\""$master"_link\"/>\n\n"
 
 # Default LFC
-default_lfc="\t<host id=\""$lfc"\" power=\"100Gf\" core=\"4\"/>\n
+default_lfc="\t<host id=\""$lfc"\" power=\"5Gf\" core=\"4\"/>\n
 \t<link id=\""$lfc"_link\" bandwidth=\"10Gbps\" latency=\"1ns\"/>\n
 \t<host_link id=\""$lfc"\" up=\""$lfc"_link\" down=\""$lfc"_link\"/>\n" 
 
@@ -58,7 +58,7 @@ default_lfc="\t<host id=\""$lfc"\" power=\"100Gf\" core=\"4\"/>\n
 
 if ! grep -q $defSE $file_transfer
 then
-    default_se="\t<host id=\"ccsrm02.in2p3.fr\" power=\"100Gf\" core=\"4\"/>\n
+    default_se="\t<host id=\"ccsrm02.in2p3.fr\" power=\"5Gf\" core=\"4\"/>\n
 \t<link id=\"ccsrm02.in2p3.fr_link\" bandwidth=\"10Gbps\" latency=\"1ns\"/>\n
 \t<host_link id=\"ccsrm02.in2p3.fr\" up=\"ccsrm02.in2p3.fr_link\"
  down=\"ccsrm02.in2p3.fr_link\"/>\n"
@@ -103,32 +103,35 @@ for line in `tail -n +2 $se_bandwidth`
 do
    se=$(echo $line | 
        awk -F',' '{print \
-       "\\t<host id=\"" $1 "\" power=\"100Gf\"/>\\n";}')
+       "\\t<host id=\"" $1 "\" power=\"5Gf\"/>\\n";}')
    for output_xml in $max_sym $max_asym $avg_sym $avg_asym
    do   
        case $output_xml in
 	   $avg_sym )
 	       links=$(echo $line | awk -F',' '{\
                   print "\\t<link id=\"" $1 "_link\" bandwidth=\"" $2 "kBps\"\
- latency=\"1ns\"/>\\n" \
+ latency=\"1ns\" sharing_policy=\"FATPIPE\"/>\\n" \
                         "\\t<host_link id=\"" $1 "\" up=\"" $1 "_link\"\
  down=\"" $1 "_link\"/>\\n"\
                   }');;
 	   $max_sym )
 	       links=$(echo $line | awk -F',' '{\
-                  print "\\t<link id=\"" $1 "_link\" bandwidth=\"" $3 "kBps\" latency=\"1ns\"/>\\n" \
-                        "\\t<host_link id=\"" $1 "\" up=\"" $1 "_link\" down=\"" $1 "_link\"/>\\n"\
+                  print "\\t<link id=\"" $1 "_link\" bandwidth=\"" $3 "kBps\"\
+ latency=\"1ns\" sharing_policy=\"FULLDUPLEX\"/>\\n" \
+                        "\\t<host_link id=\"" $1 "\" up=\"" $1 "_link_UP\" \
+ down=\""$1"_link_DOWN\"/>\\n"\
                   }');;
 	   $avg_asym )
 	       links=$(echo $line | awk -F',' '{if($4 == "0" || $6 == "0"){\
                    print "\\t<link id=\"" $1 "_link\" bandwidth=\"" $2 "kBps\"\
- latency=\"1ns\"/>\\n" \
+ latency=\"1ns\" sharing_policy=\"FATPIPE\"/>\\n" \
                          "\\t<host_link id=\"" $1 "\" up=\"" $1 "_link\"\
  down=\"" $1 "_link\"/>\\n"\
                    } else { \
                      print "\\t<link id=\"" $1 "_UP\" bandwidth=\"" $6 "kBps\"\
- latency=\"1ns\"/>\\n" \
-                           "\\t<link id=\"" $1 "_DOWN\" bandwidth=\"" $4 "kBps\" latency=\"1ns\"/>\\n" \
+ latency=\"1ns\" sharing_policy=\"FATPIPE\"/>\\n" \
+                           "\\t<link id=\"" $1 "_DOWN\" bandwidth=\"" $4 "kBps\"\
+ latency=\"1ns\" sharing_policy=\"FATPIPE\"/>\\n" \
                            "\\t<host_link id=\"" $1 "\" up=\"" $1 "_UP\"\
  down=\"" $1 "_DOWN\"/>\\n" 
                    }}') ;;
