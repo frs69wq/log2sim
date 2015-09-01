@@ -308,7 +308,8 @@ ggplot(gantt)+ geom_segment(aes(x=Start, xend=End, y=JobId, yend=JobId, color=St
 
 ### Isolation of the file transfer operations
 ```{r echo=FALSE, fig.height=9}
-ggplot(gantt[gantt$Step %in% c("Download", "Upload"),])+ geom_segment(aes(x=Start, xend=End, y=JobId, yend=JobId, color=Step), size=1.25) + 
+ggplot(gantt[gantt$Step %in% c("Download", "Upload"),])+ 
+  geom_segment(aes(x=Start, xend=End, y=JobId, yend=JobId, color=Step), size=1.25) + 
   scale_color_discrete(breaks=c("Download", "Upload"), name="") +
   scale_y_reverse() + 
   theme(legend.position="top") + xlab("Time (in seconds)") + ylab("Job Id")
@@ -347,5 +348,85 @@ ggplot(concurrency, aes(x=Start, y=factor(Count), fill=Count)) +
   xlab("Time (in seconds)") + ylab("Number of Concurrent Transfers")
 ```
 
+### According to data from logs and the VIP database
+
+```{r echo=FALSE, cache=TRUE}
+timings <- read.csv('timings/real_times.csv', header = TRUE, sep = ',') 
+# Simplify the job IDs
+timings$JobId <- timings$JobId-min(timings$JobId)
+
+queuing_step <- timings[names(timings) %in% c("JobId", "CreationTime", "DownloadStartTime")]
+names(queuing_step)<-c("JobId","Start","End")
+queuing_step$Step<-"Queuing"
+
+download_step <- timings[names(timings) %in% c("JobId", "DownloadStartTime")]
+names(download_step)<-c("JobId","Start")
+download_step$End <- timings$DownloadStartTime+timings$DownloadDuration
+download_step$Step <- "Download"
+
+computing_step = as.data.frame(timings$JobId)
+names(computing_step)="JobId"
+computing_step$Start <- download_step$End
+computing_step$End <- timings$UploadStartTime
+computing_step$Step <-"Computing"
+
+upload_step<-timings[names(timings) %in% c("JobId", "UploadStartTime")]
+names(upload_step)<-c("JobId","Start")
+upload_step$End <- timings$UploadStartTime+timings$UploadDuration
+upload_step$Step <-"Upload"
+
+gantt <- rbind(queuing_step,download_step,computing_step, upload_step)
+
+```
+
+```{r echo=FALSE, fig.height=9}
+ggplot(gantt)+ geom_segment(aes(x=Start, xend=End, y=JobId, yend=JobId, color=Step), size=1.25) + 
+  geom_point(data=timings, aes(x=(DownloadStartTime+TotalTime), y=JobId)) +
+  scale_color_discrete(breaks=c("Queuing", "Download", "Computing", "Upload"), name="") +
+  scale_y_reverse() + 
+  theme(legend.position="top") + xlab("Time (in seconds)") + ylab("Job Id")
+```
+
+### Isolation of the file transfer operations
+```{r echo=FALSE, fig.height=9}
+ggplot(gantt[gantt$Step %in% c("Download", "Upload"),])+ 
+  geom_segment(aes(x=Start, xend=End, y=JobId, yend=JobId, color=Step), size=1.25) + 
+  scale_color_discrete(breaks=c("Download", "Upload"), name="") +
+  scale_y_reverse() + 
+  theme(legend.position="top") + xlab("Time (in seconds)") + ylab("Job Id")
+```
+
+### Number of concurrent transfers (by windows of 10s)
+```{r echo=FALSE, cache=TRUE}
+binwidth=10
+find_bins <- function(origin, s, e, end) {
+  c(rep(0,(s-origin)/binwidth), 
+    rep(1, (e-s)/binwidth), 
+    rep(0,(end-e)/binwidth))
+}
+
+df <-gantt[gantt$Step %in% c("Download", "Upload"),]
+origin <- floor(min(df$Start)/binwidth)*binwidth
+end<- ceiling(max(df$End)/binwidth)*binwidth
+bins = ddply(df,.(JobId,Step), 
+             function(x) find_bins(origin, 
+                                   floor(min(x$Start)/binwidth)*binwidth,
+                                   ceiling(max(x$End)/binwidth)*binwidth, end))
+bins=bins[,-1]
+names(bins) = c("Step", seq(origin, end-binwidth, by=binwidth))
+
+concurrency = melt(ddply(bins,.(Step), colwise(sum)), 
+                   id.vars="Step", value.name="Count", variable.name="Start")
+concurrency=concurrency[concurrency$Count>0,]
+concurrency$Start <- as.integer(as.character(concurrency$Start))
+```
+
+```{r echo=FALSE, fig.height=9}
+ggplot(concurrency, aes(x=Start, y=factor(Count), fill=Count)) + 
+  geom_bar(stat="identity") + 
+  scale_fill_continuous(low="green", high="red", name="") +
+  facet_grid(Step~., margins = TRUE) + guides(fill=FALSE) +
+  xlab("Time (in seconds)") + ylab("Number of Concurrent Transfers")
+```
 
 
