@@ -119,7 +119,7 @@ fi
 if [ ! -f "$transfer_info" ]
 then
     info "\t\tFile $transfer_info does not exist. Create it."
-    echo "JobId,Source,Destination,FileSize,Time,UpDown" > $transfer_info
+    echo "Timestamp,JobId,Source,Destination,FileSize,Time,UpDown" > $transfer_info
 fi
 
 #information about each column in the file $transfer_info
@@ -133,18 +133,18 @@ fi
 # get information about upload(test) transfers 
 upload_duration=$(awk '/] UploadCommand=lcg-cr/' $input_log | \
     awk -F"Source=" '{gsub("="," ",$2); print $2}' | \
-    awk '{gsub(/:.*/,"",$1); gsub(/:.*/,"",$3); gsub("ms","",$7);printf '$job_id' ",'$machine_name',"$3","$5","$7","; if ($5==12) {print "0"} else {print "1"}}' | tee -a $transfer_info | awk -F',' '{total_time+=$5;}END{print total_time/1000}')
+    awk '{gsub(/:.*/,"",$1); gsub(/:.*/,"",$3); gsub("ms","",$7);printf '$timestamp'","'$job_id' ",'$machine_name',"$3","$5","$7","; if ($5==12) {print "0"} else {print "1"}}' | tee -a $transfer_info | awk -F',' '{total_time+=$6;}END{print total_time/1000}')
 
 # get information about download transfers 
 download_duration=$(awk '/] DownloadCommand=lcg-cp/' $input_log | awk -F"Source=" '{print $2}'| \
     awk -F"Destination=" '{count=split($1,a," "); gsub("="," ",$2);gsub("Size"," ",$2);gsub("Time"," ",$2); print a[count]" "$2}' | \
-    awk -F' ' '{ gsub("ms","",$4);print '$job_id' "," $1",'$machine_name',"$3","$4  ",2"}' |\
-tee -a $transfer_info | awk -F',' '{total_time+=$5;}END{print total_time/1000}')
+    awk -F' ' '{ gsub("ms","",$4);print '$timestamp'","'$job_id' "," $1",'$machine_name',"$3","$4  ",2"}' |\
+tee -a $transfer_info | awk -F',' '{total_time+=$6;}END{print total_time/1000}')
 
 # get information about replication transfers
 awk '/] UploadCommand=lcg-rep/' $input_log | awk -F"Source=" '{print $2}'| \
     awk -F"Destination=" '{count=split($1,a," "); gsub("="," ",$2); print a[count]" "$2}' | \
-    awk '{gsub(/:.*/,"",$1); gsub(/:.*/,"",$3); print '$job_id' "," $1 ","$3","$5","$7",3"}' >> $transfer_info 
+    awk '{gsub(/:.*/,"",$1); gsub(/:.*/,"",$3); print '$timestamp'","'$job_id' "," $1 ","$3","$5","$7",3"}' >> $transfer_info 
 
 
 # Extract information related to input files

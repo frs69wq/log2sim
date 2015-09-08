@@ -92,7 +92,7 @@ echo -e '\t<process host="'$master'" function="VIPServer"/>\n' >> $output_file
 
 #################################### add SEs to deployment file ####################################
 
-array_SE_WN_uniq=($(tail -n +2 $file_transfer | awk -F ',' '{print $2"\n"$3}' | sort -u | uniq))
+array_SE_WN_uniq=($(tail -n +2 $file_transfer | awk -F ',' '{print $3"\n"$4}' | sort -u | uniq))
 
 # check if element is in Worker nodes list
 for element in "${array_SE_WN_uniq[@]}"
@@ -124,8 +124,8 @@ do
 	awk -F',' '/'${jobid}'/ {print "\t\t<argument value=\"" $7 "\"/>"}' $job_times >> $output_file
 	# the $4>20 is to discard the upload of the number of particules to 
 	# merge by the Merge job (typically of size=11)
-	awk -F',' '/'${jobid}'/ {if ($NF == "1" && $4 >20) 
-                                 print "\t\t<argument value=\"" $4 "\"/>\n"}' $file_transfer >> $output_file
+	awk -F',' '/'${jobid}'/ {if ($NF == "1" && $5 >20) 
+                                 print "\t\t<argument value=\"" $5 "\"/>\n"}' $file_transfer >> $output_file
 	echo -e '\t</process>\n' >> $output_file
     fi
 done < sql_select_result.txt
