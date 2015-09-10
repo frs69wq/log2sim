@@ -75,7 +75,8 @@ if ! grep -q "$suffix" internet_suffixes.txt ; then
 fi
 
 #get the number of CPU cores and put it in a local variable
-cpu_core_nb=$(awk '/cpu cores/ {print $NF}' $input_log | uniq)
+#cpu_core_nb=$(awk '/cpu cores/ {print $NF}' $input_log | uniq)
+cpu_core_nb= $(grep processor $input_log | wc -l)
 
 #get bogomips
 cpu_bogomips=$(awk '/bogomips/ {print $NF}' $input_log | uniq | awk 'NR==1' )  
