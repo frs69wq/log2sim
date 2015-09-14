@@ -452,3 +452,10 @@ ggplot(concurrency, aes(x=Start, y=factor(Count), fill=Count)) +
   xlab("Time (in seconds)") + ylab("Number of Concurrent Transfers")
 ```
 
+### Distribution of queuing time by grid site
+```{r echo=FALSE, fig.height=9}
+ggplot(timings, aes(x=Site, y=QueuingTime))+ geom_boxplot() + 
+  theme(axis.text.x = element_text(angle = 50, hjust = 1)) + 
+  ylab("Queuing Time (in seconds)") + xlab("Grid Site") +
+  stat_summary(fun.y=mean, geom="line", aes(group=1, color="red")) + guides(color=FALSE)
+```
