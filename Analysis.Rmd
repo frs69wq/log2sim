@@ -64,6 +64,17 @@ ggplot(workers, aes(x=SiteName, fill=factor(Core))) + geom_bar() + scale_fill_di
   xlab("Grid Site") + ylab("Number of worker nodes") + theme(legend.position="top")
 ```
 
+### Split by BogoMIPS, Grid Site, and Country
+
+```{r echo=FALSE, fig.height=9}
+ggplot(workers, aes(x=round(MIPS, -2), fill=factor(SiteName))) + geom_bar(binwidth=100) +
+  xlab("BogoMIPS") + ylab("Number of worker nodes")+ scale_fill_discrete(name="Grid Site") +
+  facet_wrap(~Country, ncol=2) #+ theme(axis.text.x = element_text(angle = 50, hjust = 1))  
+  #theme(legend.position="top")
+```
+
+\newpage
+
 ## Statistics on file transfers
 ```{r echo=FALSE, cache=TRUE}
 transfers <- read.csv('csv_files/file_transfer.csv', header = TRUE, sep=',')
@@ -155,14 +166,26 @@ ggplot(downloads, aes(x=JobId, y=factor(FileSize), size=Time)) + geom_point() +
 
 ### Distribution of upload durations (in seconds)
 ```{r echo=FALSE, cache=TRUE}
-# Remove the upload that corresponds to the number of particules made by the Merge job
-uploads <- transfers[transfers$FileSize > 20 & transfers$UpDown == 1,]
+# Remove the uploads that corresponds to the Merge job (assuming they are the last two rows)
+uploads <- head(transfers[transfers$UpDown == 1,], n=-2)
 # Convert durations in seconds 
 uploads$Time<-uploads$Time/1000
 ```
-```{r echo=FALSE, cache=TRUE}
+```{r echo=FALSE}
 summary(uploads$Time)
 ```
+
+### Distribution of upload file sizes (in bytes)
+```{r echo=FALSE}
+summary(uploads$FileSize)
+```
+
+### Size of File to Upload vs. Job Id 
+```{r echo=FALSE,fig.height=4}
+ggplot(uploads, aes(x=JobId, y=FileSize)) + geom_point() + 
+  ylab ("File Size") + xlab ("Job ID") + geom_smooth(method="lm")
+```
+
 ### Destination SE vs. Job Id for each Worker Node Country
 ```{r echo=FALSE,fig.height=8}
 ggplot(uploads, aes(x=JobId, y=Destination, size=Time)) + geom_point() + 
@@ -428,5 +451,4 @@ ggplot(concurrency, aes(x=Start, y=factor(Count), fill=Count)) +
   facet_grid(Step~., margins = TRUE) + guides(fill=FALSE) +
   xlab("Time (in seconds)") + ylab("Number of Concurrent Transfers")
 ```
-
 
