@@ -188,7 +188,7 @@ done
 if [ ! -f "$job_times" ]
 then
     info "\t\tFile $job_times does not exist. Create it."
-    echo "JobId,CreationTime,QueuingTime,DownloadStartTime,DownloadDuration_GASW,DownloadDuration,ExecutionTime,UploadStartTime,UploadDuration_GASW,UploadDuration,TotalTime" > $job_times
+    echo "JobId,Node,Site,CreationTime,QueuingTime,DownloadStartTime,DownloadDuration_GASW,DownloadDuration,ExecutionTime,UploadStartTime,UploadDuration_GASW,UploadDuration,TotalTime" > $job_times
 fi
 
 download_duration_gasw=$(awk '/] Input download time:/''{print}' $input_log | \
