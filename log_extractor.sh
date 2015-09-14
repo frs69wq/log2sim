@@ -76,7 +76,7 @@ fi
 
 #get the number of CPU cores and put it in a local variable
 #cpu_core_nb=$(awk '/cpu cores/ {print $NF}' $input_log | uniq)
-cpu_core_nb= $(grep processor $input_log | wc -l)
+cpu_core_nb=$(grep processor $input_log | wc -l)
 
 #get bogomips
 cpu_bogomips=$(awk '/bogomips/ {print $NF}' $input_log | uniq | awk 'NR==1' )  
@@ -203,5 +203,5 @@ dde="${download_duration_gasw},${download_duration},${execution_time}"
 uptt="${upload_duration_gasw},${upload_duration},${total_time}" 
 
 awk -F'|' -v dde=$dde -v uptt=$uptt \
-    /$job_id/'{print $1","$3","$4","$5","dde","$6","uptt}' $sql_results \
+    /$job_id/'{print $1","$2","$3","$4","$5","$6","dde","$7","uptt}' $sql_results \
 >> $job_times

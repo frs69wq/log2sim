@@ -54,7 +54,7 @@ db_name=$(basename ${log_dir}/${workflow_dir}/db/*.h2.db .h2.db)
 
 # Create an SQL query to retrieve the names of worker from the VIP database
 # Allows us to reconstruct broken names recovered from log files.
-sql_get_jobs_info="SELECT ID, NODE_NAME,
+sql_get_jobs_info="SELECT ID, NODE_NAME, NODE_SITE,
 DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), QUEUED) as CREATION_TIME,
 DATEDIFF('SECOND',QUEUED, DOWNLOAD) as QUEUING_TIME,
 DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), DOWNLOAD) as START_DOWNLOAD, 
