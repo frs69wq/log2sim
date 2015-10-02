@@ -104,6 +104,7 @@ info "End of log file extraction."
 info "\t Worker nodes: $worker_nodes ... created."
 info "\t File transfers: $file_transfer ... created."
 info "\t LFC initial catalog: $LFC_catalog ... created."
+info "\t Job timings: real_times.csv ... created."
 
 
 ##############################################################################
