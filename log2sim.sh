@@ -50,7 +50,7 @@ info "Retrieving worker node names from database ..."
 db_driver=$(awk -F'=' '/db_driver/ {print $2}' configParser.txt)
 
 # Get the name of VIP database
-db_name=$(basename ${log_dir}/${workflow_dir}/db/*.h2.db .h2.db)
+db_name=$(basename ${log_dir}/${workflow_dir}/db/db/*.h2.db .h2.db)
 
 # Create an SQL query to retrieve the names of worker from the VIP database
 # Allows us to reconstruct broken names recovered from log files.
@@ -64,7 +64,7 @@ from JOBS WHERE UPLOAD IS NOT NULL AND STATUS='COMPLETED' ORDER BY ID"
 # Submit the SQL query to H2. 
 # Redirect output in a temporary "host_names.txt" file.
 java -cp ${db_driver} org.h2.tools.Shell \
-     -url "jdbc:h2:${log_dir}/${workflow_dir}/db/$db_name" \
+     -url "jdbc:h2:${log_dir}/${workflow_dir}/db/db/$db_name" \
      -user gasw -password gasw -sql "$sql_get_jobs_info" > sql_results.txt \
 || info "SQL query failed."
 
@@ -199,8 +199,8 @@ sed s/WORKFLOW_NAME/$workflow_dir/g Analysis.Rmd > Analysis_$workflow_dir.Rmd
 #                                                                            #
 ##############################################################################
 
-info "Moving produced files in ../results/$workflow_dir"
-output_dir="../results/$workflow_dir"
+info "Moving produced files in ../results/complete-$workflow_dir"
+output_dir="../results/complete-$workflow_dir"
 if [ ! -d $output_dir ]
 then
     mkdir $output_dir

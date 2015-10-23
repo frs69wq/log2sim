@@ -54,7 +54,7 @@ then
 fi
 
 # Get the name of the database
-db_name=$(basename ${log_dir}/${workflow_dir}/db/*.h2.db .h2.db)
+db_name=$(basename ${log_dir}/${workflow_dir}/db/db/*.h2.db .h2.db)
 
 ####### DateBase Operations 
 #sql_get_jobs_info="SELECT id,DATEDIFF('SECOND',QUEUED,download) as latency,DATEDIFF('SECOND',DOWNLOAD,END_E) as ttl,status,node_name,simulation_id,DATEDIFF('SECOND',queued,download)+DATEDIFF('SECOND',download,end_e) as latency_ttl, date \
@@ -73,7 +73,7 @@ FROM JOBS "
 
 # Send SQL query to H2 for execution and write select reslut to the temporary text file.
 
-java -cp ${db_driver} org.h2.tools.Shell -url "jdbc:h2:${log_dir}/${workflow_dir}/db/$db_name" -user gasw -password gasw -sql "$sql_get_jobs_info" > sql_select_result.txt || info "Sql query execution failed."
+java -cp ${db_driver} org.h2.tools.Shell -url "jdbc:h2:${log_dir}/${workflow_dir}/db/db/$db_name" -user gasw -password gasw -sql "$sql_get_jobs_info" > sql_select_result.txt || info "Sql query execution failed."
 
 output_file="$output_dir/deployment_${workflow_dir}.xml"
 
