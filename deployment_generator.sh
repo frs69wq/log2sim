@@ -14,10 +14,10 @@ function info {
 
 # Input parameter is the name of folder that contains all of log files
 # and database for a workflow
-workflow_dir=${1:? "Name of workflow folder is mandatory!!"}
+workflow=${1:? "Name of workflow folder is mandatory!!"}
 initial=${2:-"standalone"}
 
-LFC_catalog="LfcCatalog_$workflow_dir.csv"
+LFC_catalog="LfcCatalog_$workflow.csv"
 
 if [ $initial == "initial" ]
 then 
@@ -31,10 +31,6 @@ else
     info "Deployment file regeneration" >> README
 fi
 
-# Default Master
-master="vip.creatis.insa-lyon.fr" 
-# Default LFC
-lfc="lfc-biomed.in2p3.fr" 
 # Default Storage Element
 defSE=$(awk -F'=' '/defSE/ {print $2}' $config)
 
@@ -50,28 +46,27 @@ then
     db_driver=../$db_driver
 fi
 
-output_file="$output_dir/deployment_${workflow_dir}.xml"
+output_file="$output_dir/deployment_${workflow}.xml"
 
 header="<?xml version='1.0'?>"\
 "\n<!DOCTYPE platform SYSTEM \"http://simgrid.gforge.inria.fr/simgrid.dtd\">"\
-"\n<platform version=\"3\">\n"
+"\n<platform version=\"3\">\n"\
+"\t<process host=\"vip.creatis.insa-lyon.fr\" function=\"VIPServer\"/>\n"
 
 echo -e $header > $output_file
-
-echo -e '\t<process host="'$master'" function="VIPServer"/>\n' >> $output_file
 
 ######################## add SEs to deployment file ############################
 
 tail -n +2 $file_transfer | grep -v $defSE | \
     awk -F ',' '{printf "\t<process host=\"";
                  if ($NF=="2") printf $3; else {printf $4};
-                 print "\" function=\"SE\"/>"}' | sort -u | uniq >> $output_file
+                 print "\" function=\"SE\"/>"}' | sort | uniq >> $output_file
 
 echo -e '\n\t<process host="'$defSE'" function="DefaultSE"/>' >> $output_file
 
 ################################################################################
 
-echo -e "\t<process host=\"$lfc\" function=\"DefaultLFC\">\n"\
+echo -e "\t<process host=\"lfc-biomed.in2p3.fr\" function=\"DefaultLFC\">\n"\
 "\t\t<argument value=\"simgrid_files/$LFC_catalog\"/>\n"\
 "\t</process>\n" >> $output_file 
 
@@ -82,13 +77,12 @@ sql_query="SELECT id, command, node_name, \
 DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), DOWNLOAD) as START_TIME, \
 DATEDIFF('SECOND',DOWNLOAD,END_E) as TTL, \
 DATEDIFF('SECOND',RUNNING,UPLOAD) as COMPUTE_TIME \
-FROM JOBS \
-WHERE status ='COMPLETED' ORDER BY id"
+FROM JOBS WHERE status ='COMPLETED' ORDER BY id"
 
 join \
     <(grep "1$" $file_transfer | awk -F',' '{if ($5>20) print $2" "$5}' | sort)\
     <(java -cp ${db_driver} org.h2.tools.Shell \
-    -url "jdbc:h2:${log_dir}/${workflow_dir}/db/jobs" \
+    -url "jdbc:h2:${log_dir}/${workflow}/db/jobs" \
     -user gasw -password gasw -sql "$sql_query" | \
     sed -e '1d' -e '$d' -e 's/ *| */ /g') | awk \
     '{printf "\t<process host=\""$4"\" function=\""; 
