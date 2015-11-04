@@ -1,13 +1,14 @@
 #!/bin/bash -u
 ##############################################################################
-# This script parses a log file from the VIP platform                        #
-# @Author: Mohammad Mahdi BAZM                                               #
-# Company: CC-IN2P3 & CREATIS                                                #
+# Copyright (c) Centre de Calcul de l'IN2P3 du CNRS, CREATIS                 #
+# Contributor(s) : Frédéric SUTER, Mohammad Mahdi BAZM (2015)                #
+#                                                                            #
+# This program is free software; you can redistribute it and/or modify it    #
+# under the terms of the license (GNU LGPL) which comes with this code.      #
 ##############################################################################
-
 # local function to log the steps of execution of the script
 function info {
-  echo -e [`date +"%D %T"`] $*
+  echo -e [`date +"%D %T"`] "\t\t"$*
 }
 cd $(dirname $0)
 
@@ -37,7 +38,7 @@ job_id=$(awk -F'=' '/^JOBID=/''{print $2}' $input_log)
 #testing the existence of the file machine_info
 if [ ! -f "$machine_info" ]
 then
-    info "\t\tFile $machine_info does not exist. Create it."
+    info "File $machine_info does not exist. Create it."
     echo "Timestamp,Name,Core,MIPS,NetSpeed,SiteName,Country,CloseSE" > $machine_info
 fi
 #information about each column in the file machine_info
@@ -63,16 +64,8 @@ timestamp=$(awk '/START date/ {print $NF}' $input_log)
 # Get machine name
 machine_name=$(awk '/uname/{getline; print $2}' $input_log)
 
-# Checking the host name format. 
-# Test if the suffix of the host name has a match in internet_suffixes.txt
-# If it misses a proper suffix, we use the VIP database to complete the name.
-suffix=$(echo $machine_name | awk -F '.' '{print $NF}')
+country=$(echo $machine_name | awk -F '.' '{print $NF}')
 
-if ! grep -q "$suffix" internet_suffixes.txt ; then
-     new_name=$(grep $machine_name $sql_results | cut -d'|' -f 2 | sed s/' '//g | uniq)
-     machine_name=$new_name
-     suffix=$(echo $machine_name | awk -F'.' '{print $NF}')
-fi
 
 #get the number of CPU cores and put it in a local variable
 #cpu_core_nb=$(awk '/cpu cores/ {print $NF}' $input_log | uniq)
@@ -99,18 +92,18 @@ then
     close_SE=$dpm_host
 fi
 
-full_info=$(echo "$machine_name,$cpu_core_nb,${cpu_bogomips}Mf,$net_interface_speed,$site,$suffix,$close_SE")
+full_info=$(echo "$machine_name,$cpu_core_nb,${cpu_bogomips}Mf,$net_interface_speed,$site,$country,$close_SE")
 
 #write informations in the file: machine_info
 if ! grep -q $full_info $machine_info ; then
 
   if grep -q $machine_name $machine_info ; then
-    info "\t\tDifferent information for '$machine_name' exists in '$machine_info'."
-    info "\t\tCreate a new entry with timestamp '$timestamp'"
+    info "Different information for '$machine_name' exists in '$machine_info'."
+    info "Create a new entry with timestamp '$timestamp'"
   fi
     echo "$timestamp,$full_info" >> $machine_info
 else
-     info "\t\tSimilar information for '$machine_name' already exists in '$machine_info'."
+     info "Similar information for '$machine_name' already exists in '$machine_info'."
 fi
 
 ################################################################################
@@ -119,7 +112,7 @@ fi
 # Testing the existence of the file transfer_info
 if [ ! -f "$transfer_info" ]
 then
-    info "\t\tFile $transfer_info does not exist. Create it."
+    info "File $transfer_info does not exist. Create it."
     echo "Timestamp,JobId,Source,Destination,FileSize,Time,UpDown" > $transfer_info
 fi
 
@@ -155,7 +148,7 @@ awk '/] UploadCommand=lcg-rep/' $input_log | awk -F"Source=" '{print $2}'| \
 
 if [ ! -f "$file_info" ]
 then
-    info "\t\tFile $file_info does not exist. Create it."
+    info "File $file_info does not exist. Create it."
     touch $file_info
 fi
 
@@ -187,21 +180,16 @@ done
 
 if [ ! -f "$job_times" ]
 then
-    info "\t\tFile $job_times does not exist. Create it."
-    echo "JobId,Node,Site,CreationTime,QueuingTime,DownloadStartTime,DownloadDuration_GASW,DownloadDuration,ExecutionTime,UploadStartTime,UploadDuration_GASW,UploadDuration,TotalTime" > $job_times
+    info "File $job_times does not exist. Create it."
+    echo -e "JobId,Command,Node,Site,"\
+"CreationTime,QueuingDuration,"\
+"DownloadStartTime,DownloadDuration,"\
+"ComputeStartTime,ComputeDuration,"\
+"UploadStartTime,UploadDuration,TotalTime,"\
+"DownloadDuration_File,UploadDuration_File" > $job_times
 fi
 
-download_duration_gasw=$(awk '/] Input download time:/''{print}' $input_log | \
-    awk '{print $(NF-1)}')
-execution_time=$(awk '/] Execution time:/''{print}' $input_log | awk '{print $(NF-1)}')
-upload_duration_gasw=$(awk '/] Results upload time:/''{print}' $input_log | \
-    awk '{print $(NF-1)}')    
-total_time=$(awk '/] Total running time:/''{print}' $input_log | \
-    awk '{print $(NF-1)}')
+file_times=",${download_duration},${upload_duration}" 
 
-dde="${download_duration_gasw},${download_duration},${execution_time}"
-uptt="${upload_duration_gasw},${upload_duration},${total_time}" 
-
-awk -F'|' -v dde=$dde -v uptt=$uptt \
-    /$job_id/'{print $1","$2","$3","$4","$5","$6","dde","$7","uptt}' $sql_results \
->> $job_times
+sed 's/ /,/g' $sql_results | awk -F',' -v file=$file_times \
+    /$job_id/'{print $0 file}'>> $job_times

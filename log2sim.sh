@@ -1,11 +1,10 @@
 #! /bin/bash -u
-
 ##############################################################################
-# This script parses all log files related to the simulation of an           #
-# application on the grid and creates corresponding files in CSV format.     #
-# The log files are the log of executed jobs on the grid.                    #
-# @Authors: Mohammad Mahdi BAZM, Frédéric SUTER                              #
-# Company: CC-IN2P3 & CREATIS                                                #
+# Copyright (c) Centre de Calcul de l'IN2P3 du CNRS, CREATIS                 #
+# Contributor(s) : Frédéric SUTER, Mohammad Mahdi BAZM (2015)                #
+#                                                                            #
+# This program is free software; you can redistribute it and/or modify it    #
+# under the terms of the license (GNU LGPL) which comes with this code.      #
 ##############################################################################
 
 # local function to log the steps of execution of the script
@@ -49,26 +48,23 @@ info "Retrieving worker node names from database ..."
 # Get database driver from config file
 db_driver=$(awk -F'=' '/db_driver/ {print $2}' configParser.txt)
 
-# Get the name of VIP database
-db_name=$(basename ${log_dir}/${workflow_dir}/db/db/*.h2.db .h2.db)
-
-# Create an SQL query to retrieve the names of worker from the VIP database
-# Allows us to reconstruct broken names recovered from log files.
-sql_get_jobs_info="SELECT ID, NODE_NAME, NODE_SITE,
+sql_query="SELECT ID, COMMAND, NODE_NAME, NODE_SITE,
 DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), QUEUED) as CREATION_TIME,
 DATEDIFF('SECOND',QUEUED, DOWNLOAD) as QUEUING_TIME,
-DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), DOWNLOAD) as START_DOWNLOAD, 
-DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), UPLOAD) as START_UPLOAD 
-from JOBS WHERE UPLOAD IS NOT NULL AND STATUS='COMPLETED' ORDER BY ID"
+DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), DOWNLOAD) as START_DOWNLOAD,
+DATEDIFF('SECOND',DOWNLOAD,RUNNING) as DOWNLOAD_TIME,
+DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), RUNNING) as START_COMPUTE,
+DATEDIFF('SECOND',RUNNING,UPLOAD) as COMPUTE_TIME,
+DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), UPLOAD) as START_UPLOAD,
+DATEDIFF('SECOND',UPLOAD, END_E) as UPLOAD_TIME,
+DATEDIFF('SECOND',DOWNLOAD,END_E) as TOTAL_TIME
+from JOBS WHERE STATUS='COMPLETED' ORDER BY ID"
 
-# Submit the SQL query to H2. 
-# Redirect output in a temporary "host_names.txt" file.
 java -cp ${db_driver} org.h2.tools.Shell \
-     -url "jdbc:h2:${log_dir}/${workflow_dir}/db/db/$db_name" \
-     -user gasw -password gasw -sql "$sql_get_jobs_info" > sql_results.txt \
+     -url "jdbc:h2:${log_dir}/${workflow_dir}/db/jobs" \
+     -user gasw -password gasw -sql "$sql_query" | \
+     sed -e '1d' -e '$d' -e 's/ *| */ /g' > db_dump.csv \
 || info "SQL query failed."
-
-sed s/' '//g -i sql_results.txt
 
 ##############################################################################
 #                                                                            #
@@ -82,12 +78,10 @@ $(ls -l ${log_dir}/${workflow_dir}/out/*.sh.out | wc -l) log files"
 
 for log_file in  `ls ${log_dir}/${workflow_dir}/out/*.sh.out`; do
     info "\tParsing  $log_file ..."
-    ./log_extractor.sh $log_file ${LFC_catalog} sql_results.txt
+    ./log_extractor.sh $log_file ${LFC_catalog} db_dump.csv
 done
 
-rm -f sql_results.txt
-
-###  Sanity check ###
+###  Sanity checks  ###
 # Assume that inputs/gate.sh.tar.gz and
 # inputs/opengate_version_7.0.tar.gz are at least stored on
 # default SE. If not, add them    
@@ -99,6 +93,27 @@ if ! $(grep -q "gate.sh.tar.gz" $LFC_catalog);
 then
     echo "inputs/gate.sh.tar.gz,73043,$defSE" >> $LFC_catalog
 fi
+
+# Checking the host name format. 
+# Test if the suffix of the host name has a match in internet_suffixes.txt
+# If it misses a proper suffix, we use the VIP database to complete the name.
+sed '1d' $worker_nodes | while read line
+do
+    worker_name=$(echo $line | awk -F',' '{print $2}')
+    suffix=$(echo $worker_name | awk -F '.' '{print $NF}')
+    if ! grep -q "$suffix" internet_suffixes.txt ; then
+	new_name=$(grep $worker_name db_dump.csv | awk '{print $3}' | uniq)
+	new_suffix=$(echo $new_name | awk -F'.' '{print $NF}')
+
+	new_line=$(echo $line |sed -e "s/$worker_name/$new_name/g" \
+	    -e "s/,$suffix,/,$new_suffix,/g" ) 
+	info $new_line
+	sed "s/$line/$new_line/g" -i $worker_nodes
+    fi
+done
+exit
+
+rm -f db_dump.csv
 
 info "End of log file extraction."
 info "\t Worker nodes: $worker_nodes ... created."
@@ -219,7 +234,6 @@ mv -f *.xml  $LFC_catalog $output_dir/simgrid_files
 mv -f $worker_nodes $file_transfer $se_bandwidth $output_dir/csv_files
 mv -f $real_times $output_dir/timings
 
-#rm -f sql_results.txt
 #Generate application file.
 #  info "Generating application file ..."
 #  FLE_APPLICATION="Application_${workflow_dir}.txt"
