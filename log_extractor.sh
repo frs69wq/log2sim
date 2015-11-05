@@ -18,7 +18,7 @@ input_log=${1:? please give log file name}
 file_info=${2:-input_files_info.csv}
 machine_info="worker_nodes.csv"
 transfer_info="file_transfer.csv"
-job_times="real_times.csv"
+total_transfer_times="real_times.csv"
 
 # checking if the file is empty (Job did not complete successfully)
 chk_file=$(awk '/] Total running time:/''{print}' $input_log)
@@ -139,6 +139,9 @@ awk '/] UploadCommand=lcg-rep/' $input_log | awk -F"Source=" '{print $2}'| \
     awk -F"Destination=" '{count=split($1,a," "); gsub("="," ",$2); print a[count]" "$2}' | \
     awk '{gsub(/:.*/,"",$1); gsub(/:.*/,"",$3); print '$timestamp'","'$job_id' "," $1 ","$3","$5","$7",3"}' >> $transfer_info 
 
+################################################################################
+###             Extraction of information related to input files             ###
+################################################################################
 
 # Extract information related to input files
 # Row format:
@@ -172,10 +175,15 @@ do
   fi
 done
 
-if [ ! -f "$job_times" ]
+################################################################################
+###               logging cumulated data transfer time per job               ###
+################################################################################
+
+if [ ! -f "$total_transfer_times" ]
 then
-    info "File $job_times does not exist. Create it."
-    echo -e "JobId,DownloadDuration_File,UploadDuration_File" > $job_times
+    info "File $total_transfer_times does not exist. Create it."
+    echo -e "JobId,DownloadDuration_File,UploadDuration_File" \
+	> $total_transfer_times
 fi
 
-echo -e "$job_id,$download_duration,$upload_duration" >> $job_times 
+echo -e "$job_id,$download_duration,$upload_duration" >> $total_transfer_times 
