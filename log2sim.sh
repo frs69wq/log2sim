@@ -29,6 +29,7 @@ else
     exit
 fi    
 
+db_dump="db_dump.csv"
 worker_nodes="worker_nodes.csv"
 file_transfer="file_transfer.csv"
 real_times="real_times.csv"
@@ -43,29 +44,16 @@ LFC_catalog="LfcCatalog_$workflow_dir.csv"
 # Set name of generated deployment file
 deployment_file="deployment_$workflow_dir.xml"
 
-info "Retrieving worker node names from database ..."
+##############################################################################
+#                                                                            #
+#                           database extraction                              #
+#                                                                            #
+##############################################################################
 
-# Get database driver from config file
-db_driver=$(awk -F'=' '/db_driver/ {print $2}' configParser.txt)
-
-sql_query="SELECT ID, COMMAND, NODE_NAME, NODE_SITE,
-DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), QUEUED) as CREATION_TIME,
-DATEDIFF('SECOND',QUEUED, DOWNLOAD) as QUEUING_TIME,
-DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), DOWNLOAD) as START_DOWNLOAD,
-DATEDIFF('SECOND',DOWNLOAD,RUNNING) as DOWNLOAD_TIME,
-DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), RUNNING) as START_COMPUTE,
-DATEDIFF('SECOND',RUNNING,UPLOAD) as COMPUTE_TIME,
-DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), UPLOAD) as START_UPLOAD,
-DATEDIFF('SECOND',UPLOAD, END_E) as UPLOAD_TIME,
-DATEDIFF('SECOND',DOWNLOAD,END_E) as TOTAL_TIME
-from JOBS WHERE STATUS='COMPLETED' ORDER BY ID"
-
-
-java -cp ${db_driver} org.h2.tools.Shell \
-     -url "jdbc:h2:${log_dir}/${workflow_dir}/db/jobs" \
-     -user gasw -password gasw -sql "$sql_query" | \
-     sed -e '1d' -e '$d' -e 's/ *| */ /g' > db_dump.csv \
-|| info "SQL query failed."
+info "Starting extraction from job database"
+./db_extractor.sh $workflow_dir
+info "End of database extraction."
+info "\t DB dump: $db_dump ... created."
 
 ##############################################################################
 #                                                                            #
@@ -103,25 +91,34 @@ do
     worker_name=$(echo $line | awk -F',' '{print $2}')
     suffix=$(echo $worker_name | awk -F '.' '{print $NF}')
     if ! grep -q "$suffix" internet_suffixes.txt ; then
-	new_name=$(grep $worker_name db_dump.csv | awk '{print $3}' | uniq)
+	new_name=$(grep $worker_name $db_dump | awk '{print $3}' | uniq)
 	new_suffix=$(echo $new_name | awk -F'.' '{print $NF}')
 
 	new_line=$(echo $line |sed -e "s/$worker_name/$new_name/g" \
-	    -e "s/,$suffix,/,$new_suffix,/g" ) 
-	info $new_line
+	    -e "s/,$suffix,/,$new_suffix,/g" )
 	sed "s/$line/$new_line/g" -i $worker_nodes
     fi
 done
-exit
 
-rm -f db_dump.csv
+sed '1d' $file_transfer | while read line
+do
+    worker_name=$(echo $line | awk -F','\
+       '{if ($NF =="2") print $4; else {print $3}}')
+    suffix=$(echo $worker_name | awk -F '.' '{print $NF}')
+    if ! grep -q "$suffix" internet_suffixes.txt ; then
+	new_name=$(grep $worker_name $db_dump | awk '{print $3}' | uniq)
+	new_suffix=$(echo $new_name | awk -F'.' '{print $NF}')
+
+	new_line=$(echo $line |sed -e "s/$worker_name/$new_name/g")
+	sed "s/$line/$new_line/g" -i $file_transfer
+    fi
+done
 
 info "End of log file extraction."
 info "\t Worker nodes: $worker_nodes ... created."
 info "\t File transfers: $file_transfer ... created."
 info "\t LFC initial catalog: $LFC_catalog ... created."
 info "\t Job timings: real_times.csv ... created."
-
 
 ##############################################################################
 #                                                                            #
@@ -181,8 +178,9 @@ info "\tLauncher: simulate_$workflow_dir.sh ... created."
 ##############################################################################
 echo -e "Data for $workflow_dir originally produced on: "$(date +"%D %T")"\n
 Directory organization:
-\t./ -> simulate_$workflow_dir.sh ${workflow_dir}_summary.html Analysis_${workflow_dir}.Rmd README
-\tcsv_files/ -> $worker_nodes $file_transfer $se_bandwidth
+\t./ -> simulate_$workflow_dir.sh ${workflow_dir}_summary.html"\
+" Analysis_${workflow_dir}.Rmd README
+\tcsv_files/ -> $db_dump $worker_nodes $file_transfer $se_bandwidth
 \tsimgrid_files/ -> XML files and $LFC_catalog
 \ttimings/ -> $real_times\n
 To partially regenerate some files do:
@@ -226,13 +224,13 @@ then
 fi
 info "\t$output_dir -> simulate_$workflow_dir.sh"\
      " ${workflow_dir}_summary.html README Analysis_${workflow_dir}.Rmd"
-info "\t$output_dir/csv_files/ -> $worker_nodes $file_transfer $se_bandwidth"
+info "\t$output_dir/csv_files/ -> $db_dump $worker_nodes $file_transfer $se_bandwidth "
 info "\t$output_dir/simgrid_files/ -> XML files and $LFC_catalog"
 info "\t$output_dir/timings/ -> $real_times"
 
 mv -f simulate_*.sh *.html Analysis_$workflow_dir.Rmd README $output_dir/
 mv -f *.xml  $LFC_catalog $output_dir/simgrid_files
-mv -f $worker_nodes $file_transfer $se_bandwidth $output_dir/csv_files
+mv -f $db_dump $worker_nodes $file_transfer $se_bandwidth $output_dir/csv_files
 mv -f $real_times $output_dir/timings
 
 #Generate application file.
