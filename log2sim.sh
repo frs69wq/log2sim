@@ -97,20 +97,7 @@ do
 	new_line=$(echo $line |sed -e "s/$worker_name/$new_name/g" \
 	    -e "s/,$suffix,/,$new_suffix,/g" )
 	sed "s/$line/$new_line/g" -i $worker_nodes
-    fi
-done
-
-sed '1d' $file_transfer | while read line
-do
-    worker_name=$(echo $line | awk -F','\
-       '{if ($NF =="2") print $4; else {print $3}}')
-    suffix=$(echo $worker_name | awk -F '.' '{print $NF}')
-    if ! grep -q "$suffix" internet_suffixes.txt ; then
-	new_name=$(grep $worker_name $db_dump | awk '{print $3}' | uniq)
-	new_suffix=$(echo $new_name | awk -F'.' '{print $NF}')
-
-	new_line=$(echo $line |sed -e "s/$worker_name/$new_name/g")
-	sed "s/$line/$new_line/g" -i $file_transfer
+	sed "s/$worker_name/$new_name/g" -i $file_transfer
     fi
 done
 
