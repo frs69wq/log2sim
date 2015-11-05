@@ -26,8 +26,8 @@ output="db_dump.csv"
 if [ ! -f "$output" ]
 then
     info "File $output does not exist. Create it."
-    echo "JobId,Command,Name,Site,CreationTime, QueuingDuration,"
-"DownloadStartTime,DownloadDuration,ComputeStartTime,ComputeDuration"
+    echo "JobId,Command,Name,Site,CreationTime, QueuingDuration,"\
+"DownloadStartTime,DownloadDuration,ComputeStartTime,ComputeDuration"\
 "UploadStartTime,UploadDuration,TotalDuration" > $output
 fi
 
