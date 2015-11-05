@@ -16,7 +16,6 @@ cd $(dirname $0)
 
 input_log=${1:? please give log file name}
 file_info=${2:-input_files_info.csv}
-sql_results=${3:? hosts name file is mandatory}
 machine_info="worker_nodes.csv"
 transfer_info="file_transfer.csv"
 job_times="real_times.csv"
@@ -173,23 +172,10 @@ do
   fi
 done
 
-
-# Extract different timers on the job execution.
-# Row format
-# download, upload, execution, and total execution time of each job.
-
 if [ ! -f "$job_times" ]
 then
     info "File $job_times does not exist. Create it."
-    echo -e "JobId,Command,Node,Site,"\
-"CreationTime,QueuingDuration,"\
-"DownloadStartTime,DownloadDuration,"\
-"ComputeStartTime,ComputeDuration,"\
-"UploadStartTime,UploadDuration,TotalTime,"\
-"DownloadDuration_File,UploadDuration_File" > $job_times
+    echo -e "JobId,DownloadDuration_File,UploadDuration_File" > $job_times
 fi
 
-file_times=",${download_duration},${upload_duration}" 
-
-sed 's/ /,/g' $sql_results | awk -F',' -v file=$file_times \
-    /$job_id/'{print $0 file}'>> $job_times
+echo -e "$job_id,$download_duration,$upload_duration" >> $job_times 

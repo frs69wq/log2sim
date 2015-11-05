@@ -60,6 +60,7 @@ DATEDIFF('SECOND',UPLOAD, END_E) as UPLOAD_TIME,
 DATEDIFF('SECOND',DOWNLOAD,END_E) as TOTAL_TIME
 from JOBS WHERE STATUS='COMPLETED' ORDER BY ID"
 
+
 java -cp ${db_driver} org.h2.tools.Shell \
      -url "jdbc:h2:${log_dir}/${workflow_dir}/db/jobs" \
      -user gasw -password gasw -sql "$sql_query" | \
@@ -78,7 +79,7 @@ $(ls -l ${log_dir}/${workflow_dir}/out/*.sh.out | wc -l) log files"
 
 for log_file in  `ls ${log_dir}/${workflow_dir}/out/*.sh.out`; do
     info "\tParsing  $log_file ..."
-    ./log_extractor.sh $log_file ${LFC_catalog} db_dump.csv
+    ./log_extractor.sh $log_file ${LFC_catalog}
 done
 
 ###  Sanity checks  ###
