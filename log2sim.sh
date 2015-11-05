@@ -94,8 +94,8 @@ do
 	new_name=$(grep $worker_name $db_dump | awk '{print $3}' | uniq)
 	new_suffix=$(echo $new_name | awk -F'.' '{print $NF}')
 
-	new_line=$(echo $line |sed -e "s/$worker_name/$new_name/g" \
-	    -e "s/,$suffix,/,$new_suffix,/g" )
+	new_line=$(echo $line | awk -F',' -v s=$new_suffix -v n=$new_name \
+	    '{sub($7,s,$7); sub($2,n,$2); gsub(" ",",",$0); print $0}')
 	sed "s/$line/$new_line/g" -i $worker_nodes
 	sed "s/$worker_name/$new_name/g" -i $file_transfer
     fi
