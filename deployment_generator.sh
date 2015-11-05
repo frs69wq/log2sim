@@ -7,11 +7,6 @@
 # under the terms of the license (GNU LGPL) which comes with this code.      #
 ##############################################################################
 
-# local function to log the steps of execution of the script
-function info {
-  echo -e [`date +"%D %T"`] $*
-}
-
 # Input parameter is the name of folder that contains all of log files
 # and database for a workflow
 workflow=${1:? "Name of workflow folder is mandatory!!"}
@@ -22,13 +17,15 @@ LFC_catalog="LfcCatalog_$workflow.csv"
 if [ $initial == "initial" ]
 then 
     file_transfer="file_transfer.csv"
+    db_dump="db_dump.csv"
     config="configParser.txt"
     output_dir="."
 else
     file_transfer="csv_files/file_transfer.csv"
+    db_dump="csv_files/db_dump.csv"
     config="../../scripts/configParser.txt"
     output_dir="simgrid_files"
-    info "Deployment file regeneration" >> README
+    echo -e [`date +"%D %T"`] "Deployment file regeneration" >> README
 fi
 
 # Default Storage Element
@@ -37,13 +34,9 @@ defSE=$(awk -F'=' '/defSE/ {print $2}' $config)
 #Get the path of logs folder that contain all workflow folders.
 log_dir=$(awk -F'=' '/log_folder/ {print $2}' $config)
 
-# Get database driver from config file
-db_driver=$(awk -F'=' '/db_driver/ {print $2}' $config)
-
 if [ $initial != "initial" ]
 then 
     log_dir=../$log_dir
-    db_driver=../$db_driver
 fi
 
 output_file="$output_dir/deployment_${workflow}.xml"
@@ -72,26 +65,16 @@ echo -e "\t<process host=\"lfc-biomed.in2p3.fr\" function=\"DefaultLFC\">\n"\
 
 ################################################################################
 
-
-sql_query="SELECT id, command, node_name, \
-DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), DOWNLOAD) as START_TIME, \
-DATEDIFF('SECOND',DOWNLOAD,END_E) as TTL, \
-DATEDIFF('SECOND',RUNNING,UPLOAD) as COMPUTE_TIME \
-FROM JOBS WHERE status ='COMPLETED' ORDER BY id"
-
 join \
     <(grep "1$" $file_transfer | awk -F',' '{if ($5>20) print $2" "$5}' | sort)\
-    <(java -cp ${db_driver} org.h2.tools.Shell \
-    -url "jdbc:h2:${log_dir}/${workflow}/db/jobs" \
-    -user gasw -password gasw -sql "$sql_query" | \
-    sed -e '1d' -e '$d' -e 's/ *| */ /g') | awk \
+    <(sed "1d" $db_dump) | awk \
     '{printf "\t<process host=\""$4"\" function=\""; 
       if ($3 == "merge.sh") 
         print "Merge\">"; 
       else 
-        {print "Gate\" start_time=\""$5"\">"};
+        {print "Gate\" start_time=\""$8"\">"};
       print "\t\t<argument value=\""$1"\"/>";
-      print "\t\t<argument value=\""$7"\"/>";
+      print "\t\t<argument value=\""$11"\"/>";
       print "\t\t<argument value=\""$2"\"/>";
       print "\t</process>"}' >> $output_file 
 
