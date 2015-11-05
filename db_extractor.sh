@@ -26,9 +26,9 @@ output="db_dump.csv"
 if [ ! -f "$output" ]
 then
     info "File $output does not exist. Create it."
-    echo "JobId,Command,Name,Site,CreationTime,QueuingDuration,"\
-"DownloadStartTime,DownloadDuration,ComputeStartTime,ComputeDuration,"\
-"UploadStartTime,UploadDuration,TotalDuration" > $output
+    echo "JobId Command Name Site CreationTime QueuingDuration "\
+"DownloadStartTime DownloadDuration ComputeStartTime ComputeDuration "\
+"UploadStartTime UploadDuration TotalDuration" > $output
 fi
 
 # Prepare the SQL query
@@ -46,7 +46,7 @@ from JOBS WHERE STATUS='COMPLETED' ORDER BY ID"
 
 
 java -cp ${db_driver} org.h2.tools.Shell \
-     -url "jdbc:h2:${log_dir}/${workflow_dir}/db/jobs" \
+     -url "jdbc:h2:${log_dir}/${workflow_dir}/db/db/jobs" \
      -user gasw -password gasw -sql "$sql_query" | \
      sed -e '1d' -e '$d' -e 's/ *| */ /g' >> $output \
 || info "SQL query failed."
