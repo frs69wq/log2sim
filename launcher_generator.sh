@@ -1,11 +1,12 @@
 #! /bin/bash -u
+##############################################################################
+# Copyright (c) Centre de Calcul de l'IN2P3 du CNRS, CREATIS                 #
+# Contributor(s) : Frédéric SUTER, Mohammad Mahdi BAZM (2015)                #
+#                                                                            #
+# This program is free software; you can redistribute it and/or modify it    #
+# under the terms of the license (GNU LGPL) which comes with this code.      #
+##############################################################################
 
-##################################################################
-# This script generates a simulation execution file in bash      #
-# for runnig the simulation of Simgrid.                          #
-# @author:Mohammad Mahdi BAZM                                    #
-# Company: CC-IN2P3 & CREATIS laboratory                         #
-##################################################################
 #Get the path of logs folder that contain all workflow folders.
 log_dir=$(awk -F'=' '/log_folder/ {print $2}' configParser.txt)
 sim_dir=$(awk -F'=' '/sim_folder/ {print $2}' configParser.txt)

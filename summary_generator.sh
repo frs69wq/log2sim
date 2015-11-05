@@ -1,4 +1,11 @@
 #! /bin/bash -u
+##############################################################################
+# Copyright (c) Centre de Calcul de l'IN2P3 du CNRS, CREATIS                 #
+# Contributor(s) : Frédéric SUTER, Mohammad Mahdi BAZM (2015)                #
+#                                                                            #
+# This program is free software; you can redistribute it and/or modify it    #
+# under the terms of the license (GNU LGPL) which comes with this code.      #
+##############################################################################
 
 workflow_dir=${1:? Workflow directory name is mandatory!}
 
