@@ -57,7 +57,7 @@ echo -e $header > $output_file
 
 ######################## add SEs to deployment file ############################
 
-tail -n +2 $file_transfer | grep -v $defSE | \
+sed "1d" $file_transfer | grep -v $defSE | \
     awk -F ',' '{printf "\t<process host=\"";
                  if ($NF=="2") printf $3; else {printf $4};
                  print "\" function=\"SE\"/>"}' | sort | uniq >> $output_file

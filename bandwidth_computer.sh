@@ -1,13 +1,11 @@
 #! /bin/bash -u
-
 ##############################################################################
-# This script post-processes the information on file transfer to produce a   #
-# CSV file with the average and maximum upload/download/overall bandwidth    #
-# for each SE.                                                               #
-# @Author: Frédéric SUTER                                                    #
-# Company: CC-IN2P3                                                          #
+# Copyright (c) Centre de Calcul de l'IN2P3 du CNRS, CREATIS                 #
+# Contributor(s) : Frédéric SUTER, Mohammad Mahdi BAZM (2015)                #
+#                                                                            #
+# This program is free software; you can redistribute it and/or modify it    #
+# under the terms of the license (GNU LGPL) which comes with this code.      #
 ##############################################################################
-
 # local function to log the steps of execution of the script
 function info {
   echo -e [`date +"%D %T"`] $*
@@ -32,7 +30,7 @@ else
 fi
 
 
-tail -n +2 $transfers | \
+sed "1d" $transfers | \
   awk -F',' '{if ($5 > "0") { \
        bw=$5/$6; \
        if ($NF == "1" && $5 > "20") {\

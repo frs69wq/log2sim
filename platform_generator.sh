@@ -1,12 +1,11 @@
 #!/bin/bash -u
-
 ##############################################################################
-# This script generates platform files in the SimGrid XML. Information is    #
-# retrieved from CSV files extracted from the log files.                     #
-# @author: Mohammad Mahdi BAZM, Frédéric SUTER                               #
-# Company: CC-IN2P3 & CREATIS laboratory                                     #
+# Copyright (c) Centre de Calcul de l'IN2P3 du CNRS, CREATIS                 #
+# Contributor(s) : Frédéric SUTER, Mohammad Mahdi BAZM (2015)                #
+#                                                                            #
+# This program is free software; you can redistribute it and/or modify it    #
+# under the terms of the license (GNU LGPL) which comes with this code.      #
 ##############################################################################
-
 workflow_dir=${1:? "Name of workflow folder is mandatory!!"}
 initial=${2:-"standalone"}
 
@@ -80,7 +79,7 @@ done
 # explanation in ex9 on: 
 # www.theunixschool.com/2012/06/awk-10-examples-to-group-data-in-csv-or.html
 
-for line in `tail -n +2 $worker_nodes | sort -t\, -k1rn | awk -F, '!a[$2]++'`  
+sed "1d" $worker_nodes | sort -t\, -k1rn | awk -F, '!a[$2]++' | while read line  
 do   
     worker=$(echo $line | awk -F',' '{print \
         "\\t<host id=\""$2"\" power=\""$4"\" core=\""$3"\">\\n" \
@@ -99,7 +98,7 @@ do
     echo -e "<!-- storage elements -->" >> $output_xml
 done
 
-for line in `tail -n +2 $se_bandwidth`
+sed "1d" $se_bandwidth | while read line
 do
    se=$(echo $line | 
        awk -F',' '{print \
