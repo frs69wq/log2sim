@@ -33,7 +33,6 @@ db_dump="db_dump.csv"
 worker_nodes="worker_nodes.csv"
 file_transfer="file_transfer.csv"
 real_times="real_times.csv"
-se_bandwidth="se_bandwidth.csv"
 
 # Set default SE name
 defSE=$(awk -F'=' '/defSE/ {print $2}' configParser.txt)
@@ -109,18 +108,6 @@ info "\t Job timings: real_times.csv ... created."
 
 ##############################################################################
 #                                                                            #
-#                          bandwidth computation                             #
-#                                                                            #
-##############################################################################
-
-info "Computing SE bandwidth values ..."
-cmd="./bandwidth_computer.sh initial"
-info "\t$cmd"
-$cmd
-info "\tBandwidth file: $se_bandwidth ... created."
-
-##############################################################################
-#                                                                            #
 #                             deployment file                                #
 #                                                                            #
 ##############################################################################
@@ -167,11 +154,10 @@ echo -e "Data for $workflow_dir originally produced on: "$(date +"%D %T")"\n
 Directory organization:
 \t./ -> simulate_$workflow_dir.sh ${workflow_dir}_summary.html"\
 " Analysis_${workflow_dir}.Rmd README
-\tcsv_files/ -> $db_dump $worker_nodes $file_transfer $se_bandwidth
+\tcsv_files/ -> $db_dump $worker_nodes $file_transfer
 \tsimgrid_files/ -> XML files and $LFC_catalog
 \ttimings/ -> $real_times\n
 To partially regenerate some files do:
-\t../../scripts/bandwidth_computer.sh
 \t../../scripts/deployment_generator.sh ${workflow_dir}
 \t../../scripts/platform_generator.sh ${workflow_dir}\n" > \
 README
@@ -211,19 +197,11 @@ then
 fi
 info "\t$output_dir -> simulate_$workflow_dir.sh"\
      " ${workflow_dir}_summary.html README Analysis_${workflow_dir}.Rmd"
-info "\t$output_dir/csv_files/ -> $db_dump $worker_nodes $file_transfer $se_bandwidth "
+info "\t$output_dir/csv_files/ -> $db_dump $worker_nodes $file_transfer"
 info "\t$output_dir/simgrid_files/ -> XML files and $LFC_catalog"
 info "\t$output_dir/timings/ -> $real_times"
 
 mv -f simulate_*.sh *.html Analysis_$workflow_dir.Rmd README $output_dir/
 mv -f *.xml  $LFC_catalog $output_dir/simgrid_files
-mv -f $db_dump $worker_nodes $file_transfer $se_bandwidth $output_dir/csv_files
+mv -f $db_dump $worker_nodes $file_transfer $output_dir/csv_files
 mv -f $real_times $output_dir/timings
-
-#Generate application file.
-#  info "Generating application file ..."
-#  FLE_APPLICATION="Application_${workflow_dir}.txt"
-#  ./gen_application_file.sh ${workflow_dir} ${file_transfer} \
-# 	${FLE_APPLICATION}
-#  info "Application file: $FLE_APPLICATION created."
-#    mv -f Application_*.txt 
