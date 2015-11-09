@@ -24,7 +24,7 @@ else
 fi
 
 max_sym="$output_dir/platform_"$workflow_dir"_max_symmetric.xml"
-avg_sym="$output_dir/platform_"$workflow_dir"_avg_symmetric.xml"
+#avg_sym="$output_dir/platform_"$workflow_dir"_avg_symmetric.xml"
 max_asym="$output_dir/platform_"$workflow_dir"_max_asymmetric.xml"
 avg_asym="$output_dir/platform_"$workflow_dir"_avg_asymmetric.xml"
 
@@ -41,13 +41,13 @@ as_tag="<AS id=\"AS_"${workflow_dir}"\" routing=\""$routing"\">\n"
 
 # VIP Server
 server="\t<host id=\""$master"\" power=\"5Gf\" core=\"4\"/>\n
-\t<link id=\""$master"_link\" bandwidth=\"10Gbps\" latency=\"1ns\"/>\n
+\t<link id=\""$master"_link\" bandwidth=\"10Gbps\" latency=\"100us\"/>\n
 \t<host_link id=\""$master"\" up=\""$master"_link\" 
 down=\""$master"_link\"/>\n\n"
 
 # Default LFC
 default_lfc="\t<host id=\""$lfc"\" power=\"5Gf\" core=\"4\"/>\n
-\t<link id=\""$lfc"_link\" bandwidth=\"10Gbps\" latency=\"1ns\"/>\n
+\t<link id=\""$lfc"_link\" bandwidth=\"10Gbps\" latency=\"100us\"/>\n
 \t<host_link id=\""$lfc"\" up=\""$lfc"_link\" down=\""$lfc"_link\"/>\n" 
 
 # Check if default SE is in file_transfer.csv file.
@@ -56,7 +56,7 @@ default_lfc="\t<host id=\""$lfc"\" power=\"5Gf\" core=\"4\"/>\n
 if ! grep -q $defSE $file_transfer
 then
     default_se="\t<host id=\"ccsrm02.in2p3.fr\" power=\"5Gf\" core=\"4\"/>\n
-\t<link id=\"ccsrm02.in2p3.fr_link\" bandwidth=\"10Gbps\" latency=\"1ns\"/>\n
+\t<link id=\"ccsrm02.in2p3.fr_link\" bandwidth=\"10Gbps\" latency=\"100us\"/>\n
 \t<host_link id=\"ccsrm02.in2p3.fr\" up=\"ccsrm02.in2p3.fr_link\"
  down=\"ccsrm02.in2p3.fr_link\"/>\n"
 else
@@ -83,15 +83,15 @@ do
         "\\t<host id=\""$2"\" power=\""$4"\" core=\""$3"\">\\n" \
         "\\t\\t <prop id=\"closeSE\" value=\"" $NF "\"/>\\n" \
         "\\t</host>\\n"\
-        "\\t<link id=\""$2"_link\" bandwidth=\""$5"\" latency=\"1ns\"/>\\n" \
+        "\\t<link id=\""$2"_link\" bandwidth=\""$5"\" latency=\"100us\"/>\\n" \
         "\\t<host_link id=\""$2"\" up=\""$2"_link\" down=\""$2"_link\"/>\\n"}')
-    for output_xml in $max_sym $max_asym $avg_sym $avg_asym
+    for output_xml in $max_sym $max_asym $avg_asym # $avg_sym
     do
 	echo -e $worker >>$output_xml 
     done
 done 
 
-for output_xml in $max_sym $max_asym $avg_sym $avg_asym
+for output_xml in $max_sym $max_asym $avg_asym # $avg_sym
 do
     echo -e "<!-- storage elements -->" >> $output_xml
 done
@@ -141,63 +141,63 @@ do
    se=$(echo $line | 
        awk -F',' '{print \
        "\\t<host id=\"" $1 "\" power=\"5Gf\"/>\\n";}')
-   for output_xml in $max_sym $max_asym $avg_sym $avg_asym
+   for output_xml in $max_sym $max_asym $avg_asym #$avg_sym
    do   
        case $output_xml in
 	   $avg_sym )
 	       links=$(echo $line | awk -F',' '{\
                   print "\\t<link id=\"" $1 "_link\" bandwidth=\"" $2 "kBps\"\
- latency=\"1ns\" sharing_policy=\"FATPIPE\"/>\\n" \
+ latency=\"5ms\" sharing_policy=\"FATPIPE\"/>\\n" \
                         "\\t<host_link id=\"" $1 "\" up=\"" $1 "_link\"\
  down=\"" $1 "_link\"/>\\n"\
                   }');;
 	   $max_sym )
 	       links=$(echo $line | awk -F',' '{\
                   print "\\t<link id=\"" $1 "_link\" bandwidth=\"" $3 "kBps\"\
- latency=\"1ns\" sharing_policy=\"FULLDUPLEX\"/>\\n" \
+ latency=\"5ms\" sharing_policy=\"FULLDUPLEX\"/>\\n" \
                         "\\t<host_link id=\"" $1 "\" up=\"" $1 "_link_UP\" \
  down=\""$1"_link_DOWN\"/>\\n"\
                   }');;
-	   $avg_asym )
-	       links=$(echo $line | awk -F',' '{if($4 == "0" || $6 == "0"){\
-                   print "\\t<link id=\"" $1 "_link\" bandwidth=\"" $2 "kBps\"\
- latency=\"1ns\" sharing_policy=\"FATPIPE\"/>\\n" \
-                         "\\t<host_link id=\"" $1 "\" up=\"" $1 "_link\"\
- down=\"" $1 "_link\"/>\\n"\
-                   } else { \
-                     print "\\t<link id=\"" $1 "_UP\" bandwidth=\"" $6 "kBps\"\
- latency=\"1ns\" sharing_policy=\"FATPIPE\"/>\\n" \
-                           "\\t<link id=\"" $1 "_DOWN\" bandwidth=\"" $4 "kBps\"\
- latency=\"1ns\" sharing_policy=\"FATPIPE\"/>\\n" \
-                           "\\t<host_link id=\"" $1 "\" up=\"" $1 "_UP\"\
- down=\"" $1 "_DOWN\"/>\\n" 
-                   }}') ;;
 	   $max_asym )
 	       links=$(echo $line | awk -F',' '{if($4 == "0" || $6 == "0"){\
                    print "\\t<link id=\"" $1 "_link\" bandwidth=\"" $3 "kBps\"\
- latency=\"1ns\"/>\\n" \
+ latency=\"5ms\"/>\\n" \
                          "\\t<host_link id=\"" $1 "\" up=\"" $1 "_link\"\
  down=\"" $1 "_link\"/>\\n"\
                    } else { \
                      print "\\t<link id=\"" $1 "_UP\" bandwidth=\"" $7 "kBps\"\
- latency=\"1ns\"/>\\n" \
+ latency=\"5ms\"/>\\n" \
                            "\\t<link id=\"" $1 "_DOWN\" bandwidth=\"" $5 "\
-kBps\" latency=\"1ns\"/>\\n" \
+kBps\" latency=\"5ms\"/>\\n" \
                            "\\t<host_link id=\"" $1 "\" up=\"" $1 "_UP\"\
  down=\"" $1 "_DOWN\"/>\\n" 
                    }}');;
+ # 	   $avg_asym )
+ # 	       links=$(echo $line | awk -F',' '{if($4 == "0" || $6 == "0"){\
+ #                   print "\\t<link id=\"" $1 "_link\" bandwidth=\"" $2 "kBps\"\
+ # latency=\"5ms\" sharing_policy=\"FATPIPE\"/>\\n" \
+ #                         "\\t<host_link id=\"" $1 "\" up=\"" $1 "_link\"\
+ # down=\"" $1 "_link\"/>\\n"\
+ #                   } else { \
+ #                     print "\\t<link id=\"" $1 "_UP\" bandwidth=\"" $6 "kBps\"\
+ # latency=\"5ms\" sharing_policy=\"FATPIPE\"/>\\n" \
+ #                           "\\t<link id=\"" $1 "_DOWN\" bandwidth=\"" $4 "kBps\"\
+ # latency=\"5ms\" sharing_policy=\"FATPIPE\"/>\\n" \
+ #                           "\\t<host_link id=\"" $1 "\" up=\"" $1 "_UP\"\
+ # down=\"" $1 "_DOWN\"/>\\n" 
+ #                   }}') ;;
        esac
        echo -e $se$links >>$output_xml 
    done
 done
 
-for output_xml in $max_sym $max_asym $avg_sym $avg_asym
+for output_xml in $max_sym $max_asym $avg_sym # $avg_asym
 do
     echo -e "<!-- AS routing -->" >> $output_xml
     
     echo -e "\t<router id=\""$workflow_dir"_router\"/>\n"\
             "\t<backbone id=\""$workflow_dir"_backbone\""\
-            "bandwidth=\"100GBps\" latency=\"1ns\"/>"  >>$output_xml 
+            "bandwidth=\"100GBps\" latency=\"15ms\"/>"  >>$output_xml 
     
     footer="</AS>\n</platform>"
     echo -e "  "$footer >> $output_xml
