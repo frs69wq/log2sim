@@ -24,7 +24,7 @@ else
 fi
 
 max_sym="$output_dir/platform_"$workflow_dir"_max_symmetric.xml"
-#avg_sym="$output_dir/platform_"$workflow_dir"_avg_symmetric.xml"
+avg_sym="$output_dir/platform_"$workflow_dir"_avg_symmetric.xml"
 max_asym="$output_dir/platform_"$workflow_dir"_max_asymmetric.xml"
 avg_asym="$output_dir/platform_"$workflow_dir"_avg_asymmetric.xml"
 
@@ -63,7 +63,7 @@ else
   default_se=""
 fi
 
-for output_xml in $max_sym $max_asym $avg_asym #$avg_sym
+for output_xml in $max_sym $max_asym $avg_asym $avg_sym
 do
     echo -e $header"  "$as_tag$server $default_lfc $default_se"
 <!-- worker nodes -->" > $output_xml 
@@ -85,13 +85,13 @@ do
         "\\t</host>\\n"\
         "\\t<link id=\""$2"_link\" bandwidth=\""$5"\" latency=\"500us\"/>\\n" \
         "\\t<host_link id=\""$2"\" up=\""$2"_link\" down=\""$2"_link\"/>\\n"}')
-    for output_xml in $max_sym $max_asym $avg_asym # $avg_sym
+    for output_xml in $max_sym $max_asym $avg_asym $avg_sym
     do
 	echo -e $worker >>$output_xml 
     done
 done 
 
-for output_xml in $max_sym $max_asym $avg_asym # $avg_sym
+for output_xml in $max_sym $max_asym $avg_asym $avg_sym
 do
     echo -e "<!-- storage elements -->" >> $output_xml
 done
@@ -141,7 +141,7 @@ do
    se=$(echo $line | 
        awk -F',' '{print \
        "\\t<host id=\"" $1 "\" power=\"5Gf\"/>\\n";}')
-   for output_xml in $max_sym $max_asym $avg_asym #$avg_sym
+   for output_xml in $max_sym $max_asym $avg_asym $avg_sym
    do   
        case $output_xml in
   	   $avg_asym )
@@ -179,19 +179,19 @@ kBps\" latency=\"500us\"/>\\n" \
                            "\\t<host_link id=\"" $1 "\" up=\"" $1 "_UP\"\
  down=\"" $1 "_DOWN\"/>\\n" 
                    }}');;
- # 	   $avg_sym )
- # 	       links=$(echo $line | awk -F',' '{\
- #                  print "\\t<link id=\"" $1 "_link\" bandwidth=\"" $2 "kBps\"\
- # latency=\"500us\" sharing_policy=\"FATPIPE\"/>\\n" \
- #                        "\\t<host_link id=\"" $1 "\" up=\"" $1 "_link\"\
- # down=\"" $1 "_link\"/>\\n"\
- #                  }');;
+  	   $avg_sym )
+  	       links=$(echo $line | awk -F',' '{\
+                   print "\\t<link id=\"" $1 "_link\" bandwidth=\"" $2 "kBps\"\
+  latency=\"500us\" sharing_policy=\"FULLDUPLEX\"/>\\n" \
+                         "\\t<host_link id=\"" $1 "\" up=\"" $1 "_link_UP\"\
+  down=\"" $1 "_link_DOWN\"/>\\n"\
+                   }');;
        esac
        echo -e $se$links >>$output_xml 
    done
 done
 
-for output_xml in $max_sym $max_asym $avg_asym # $avg_sym
+for output_xml in $max_sym $max_asym $avg_asym $avg_sym
 do
     echo -e "<!-- AS routing -->" >> $output_xml
     

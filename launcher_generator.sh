@@ -77,7 +77,7 @@ echo -e ' verbose=${1:-""}\n'\
 for version in 1 2
 do
     echo "echo  Use version '$version' of the simulator" >>$output
-    for platform_type in "max_symmetric" "max_asymmetric" "avg_asymmetric"
+    for platform_type in "max_symmetric" "max_asymmetric" "avg_symmetric" "avg_asymmetric"
     do  
 	echo "echo -e '\\tSimulate on $platform_type'" >>$output
 	echo  'java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar VIPSimulator \
