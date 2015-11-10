@@ -46,7 +46,6 @@ else
   # event_per_sec=$(awk '/Average of Computational cost/ {print $NF}' $application_file)
 fi
   
-log_file=$workflow_dir"_log.txt"
 
 
 
@@ -64,7 +63,7 @@ echo -e '# Command lines arguments are:\n' \
         '# Number of merge jobs: '$number_of_merge_jobs'\n' \
         '# CPU merge time: '$cpu_merge_time'\n' \
         '# Events per second: '$events_per_sec'\n' \
-        '# Log file: '$log_file'\n' >> $output 
+        '# version: 1 or 2\n' >> $output 
 
 echo -e ' verbose=${1:-""}\n'\
         'if [[ $verbose == "-v" ]]\n'\
@@ -75,17 +74,22 @@ echo -e ' verbose=${1:-""}\n'\
         'fi\n' >> $output
 
 # Order of argument: Platform Deployment TotalParticleNumber NmuberOfGateJob SOSTime NumberOfMergeJob cpuMergeTime eventsPerSec LogFile
-for platform_type in "max_symmetric" "max_asymmetric" "avg_symmetric" "avg_asymmetric"
-do  
-    echo "echo Simulate on '$platform_type'" >>$output
-    echo  'java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar VIPSimulator \
-      simgrid_files/platform_'${workflow_dir}'_'${platform_type}'.xml simgrid_files/'${deployment_file}' \
-      '${total_particle_number}' '${number_of_gate_jobs}' '${gate_input_file}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}'\
-      '${log_file}' ${verbose}' \
-      '1> timings/simulated_time_on_'${platform_type}'.csv' \
-      '2>csv_files/simulated_file_transfer_on_'${platform_type}'.csv'  >> $output 
+for version in 1 2
+do
+    echo "echo  Use version '$version' of the simulator" >>$output
+    for platform_type in "max_symmetric" "max_asymmetric" "avg_asymmetric"
+    do  
+	echo "echo -e '\\tSimulate on $platform_type'" >>$output
+	echo  'java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar VIPSimulator \
+        simgrid_files/platform_'${workflow_dir}'_'${platform_type}'.xml simgrid_files/'${deployment_file}' \
+        '${total_particle_number}' '${number_of_gate_jobs}' '${gate_input_file}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}'\
+        '${version}' 10000000 ${verbose}' \
+        '1> timings/simulated_time_on_'${platform_type}'_v'${version}'.csv' \
+        '2>csv_files/simulated_file_transfer_on_'${platform_type}'_v'${version}'.csv'  >> $output 
 
-    echo -e "\n" >> $output
-done 
+	echo -e "\n" >> $output
+    done
+done
+
 #give execution right to the generated file in .sh
 chmod +x $output
