@@ -21,9 +21,10 @@ deployment_file="deployment_$workflow_dir.xml"
 total_particle_number=$(awk '/] Initial number of particles:/''{print $NF}' \
     ${log_dir}/${workflow_dir}/workflow.out)
 
-number_of_gate_jobs=$(awk '/] processor "gate" executed/''{print}' \
-    ${log_dir}/${workflow_dir}/workflow.out | awk 'END{print}' | \
-    awk '{print $(NF-1)}')
+number_of_gate_jobs=$(grep gate db_dump.csv |wc -l)
+# awk '/] processor "gate" executed/''{print}' \
+#     ${log_dir}/${workflow_dir}/workflow.out | awk 'END{print}' | \
+#     awk '{print $(NF-1)}')
 
 if [ $cheat != "no" ]
 then 
