@@ -130,8 +130,11 @@ info "Generating platform files ..."
 cmd="./platform_generator.sh ${workflow_dir} initial"
 info "\t$cmd"
 $cmd
+cmd="./mock_platform_generator.sh ${workflow_dir} initial"
+info "\t$cmd"
+$cmd
 info "\tPlatform files: platform_${workflow_dir}_[avg/max]_[a/]symmetric.xml
- ... created."
+ mock_platform_${workflow_dir}.xml ... created."
 
 ##############################################################################
 #                                                                            #
@@ -158,7 +161,8 @@ Directory organization:
 \ttimings/ -> $real_times\n
 To partially regenerate some files do:
 \t../../scripts/deployment_generator.sh ${workflow_dir}
-\t../../scripts/platform_generator.sh ${workflow_dir}\n" > \
+\t../../scripts/platform_generator.sh ${workflow_dir}
+\t../../scripts/mock_generator.sh ${workflow_dir}\n" > \
 README
 
 ##############################################################################
