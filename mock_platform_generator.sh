@@ -86,7 +86,7 @@ echo -e "<!-- storage elements -->" >> $output_xml
 sed "1d" $file_transfer | \
   awk -F',' '{if ($5 > "0") { \
        bw=$5/($6-990); \
-       if ($NF == "1" && $5 > "20") {\
+       if (($NF == "1" && $5 > "20") || ($NF=="0")) {\
          if (! ($4 in se)) {se[$4];\
            print "\t<host id=\"" $4 "\" power=\"5Gf\"/>\n" \
                  "\t<link id=\"" $4 "_link\" bandwidth=\"1Gbps\"\

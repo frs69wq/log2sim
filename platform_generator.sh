@@ -114,11 +114,16 @@ sed "1d" $file_transfer | \
              if (bw > max_bandwidth[$3]){max_bandwidth[$3]=bw};\
              total_upload_bw[$3] += bw; \
              if (bw > max_upload_bandwidth[$3]){max_upload_bandwidth[$3]=bw};\
-           }\
-         } \
+         } else { \
+           if (! ($4 in se)) {se[$4]};
+             test_count[$4] = 1; \
+             total_bw[$4] = 125000; \
+             max_bandwidth[$4] = 1250000; \
+          }\
+       }\
     }} END { \
       for (id in se) {\
-         printf id","(total_bw[id]/(download_count[id]+upload_count[id]))","\
+         printf id","(total_bw[id]/(download_count[id]+upload_count[id]+test_count[id]))","\
                 max_bandwidth[id]",";
          if (download_count[id] > 0){\
            printf (total_download_bw[id]/download_count[id])","\
