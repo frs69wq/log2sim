@@ -35,7 +35,7 @@ file_transfer="file_transfer.csv"
 real_times="real_times.csv"
 
 # Set default SE name
-defSE=$(awk -F'=' '/defSE/ {print $2}' configParser.txt)
+defSE="ccsrm02.in2p3.fr"
 
 # Set name of generated LFC catalog
 LFC_catalog="LfcCatalog_$workflow_dir.csv"

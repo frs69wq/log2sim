@@ -29,7 +29,7 @@ else
 fi
 
 # Default Storage Element
-defSE=$(awk -F'=' '/defSE/ {print $2}' $config)
+defSE="ccsrm02.in2p3.fr" 
 
 #Get the path of logs folder that contain all workflow folders.
 log_dir=$(awk -F'=' '/log_folder/ {print $2}' $config)

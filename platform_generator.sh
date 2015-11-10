@@ -30,7 +30,7 @@ avg_asym="$output_dir/platform_"$workflow_dir"_avg_asymmetric.xml"
 
 master="vip.creatis.insa-lyon.fr" # VIP Server
 lfc="lfc-biomed.in2p3.fr" # Default LFC
-defSE=$(awk -F'=' '/defSE/ {print $2}' $config) # Default SE
+defSE="ccsrm02.in2p3.fr" # Default SE
 
 routing="Cluster"
 
