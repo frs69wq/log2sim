@@ -152,8 +152,7 @@ info "\tLauncher: simulate_$workflow_dir.sh ... created."
 ##############################################################################
 echo -e "Data for $workflow_dir originally produced on: "$(date +"%D %T")"\n
 Directory organization:
-\t./ -> simulate_$workflow_dir.sh ${workflow_dir}_summary.html"\
-" Analysis_${workflow_dir}.Rmd README
+\t./ -> simulate_$workflow_dir.sh  Analysis_${workflow_dir}.Rmd README
 \tcsv_files/ -> $db_dump $worker_nodes $file_transfer
 \tsimgrid_files/ -> XML files and $LFC_catalog
 \ttimings/ -> $real_times\n
@@ -161,17 +160,6 @@ To partially regenerate some files do:
 \t../../scripts/deployment_generator.sh ${workflow_dir}
 \t../../scripts/platform_generator.sh ${workflow_dir}\n" > \
 README
-
-##############################################################################
-#                                                                            #
-#                             HTML Summary                                   #
-#                                                                            #
-##############################################################################
-info "Generating an HTML Summary ..."
-cmd="./summary_generator.sh $workflow_dir"
-info "\t$cmd"
-$cmd
-info "\tHTML Summary: ${workflow_dir}_summary.html ... created"
 
 ##############################################################################
 #                                                                            #
@@ -196,12 +184,12 @@ then
     mkdir $output_dir/timings
 fi
 info "\t$output_dir -> simulate_$workflow_dir.sh"\
-     " ${workflow_dir}_summary.html README Analysis_${workflow_dir}.Rmd"
+     " README Analysis_${workflow_dir}.Rmd"
 info "\t$output_dir/csv_files/ -> $db_dump $worker_nodes $file_transfer"
 info "\t$output_dir/simgrid_files/ -> XML files and $LFC_catalog"
 info "\t$output_dir/timings/ -> $real_times"
 
-mv -f simulate_*.sh *.html Analysis_$workflow_dir.Rmd README $output_dir/
+mv -f simulate_*.sh Analysis_$workflow_dir.Rmd README $output_dir/
 mv -f *.xml  $LFC_catalog $output_dir/simgrid_files
 mv -f $db_dump $worker_nodes $file_transfer $output_dir/csv_files
 mv -f $real_times $output_dir/timings
