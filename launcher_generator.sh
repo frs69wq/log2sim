@@ -56,7 +56,7 @@ echo '#! /bin/bash -u' > $output
 
 echo -e '# Command lines arguments are:\n' \
         '# Platform files: platform_'$workflow_dir'_[max/av]_[a/]symmetric.xml\n' \
-        '                  mock_platform_'$workflow_dir'.xml\n'\
+        '#                  mock_platform_'$workflow_dir'.xml\n'\
         '# Deployment file: '$deployment_file'\n' \
         '# Initial number particles: '$total_particle_number'\n' \
         '# Number of gate jobs: '$number_of_gate_jobs'\n' \
