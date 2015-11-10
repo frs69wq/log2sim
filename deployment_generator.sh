@@ -79,4 +79,3 @@ join \
       print "\t</process>"}' >> $output_file 
 
 echo "</platform>" >> $output_file
-
