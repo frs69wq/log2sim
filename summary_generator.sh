@@ -75,7 +75,6 @@ done < $file_transfer ;
 echo -e "\t\t\t</table>\n" \
         "\t\t</div>" >> $output
 
-
 ################################ write to Deployment file TAB ################################
 echo -e '<div id="view3">\n'\
      '<xmp>\n' >> $output
@@ -85,19 +84,6 @@ done < $deployment_file;
 echo "</xmp>" >> $output
 
 echo -e "\t\t</div>" >> $output
-
-
-
-################################ write to Application file TAB ################################
-#echo -e '<div id="view4">\n'\
-#     '<xmp>\n' >> $output
-#while read line ; do
-#    echo $line >> $output
-#done < $application_file;
-#echo "</xmp>" >> $output
-
-#echo -e "\t\t</div>" >> $output          
-
 
 ################################ write to Platform file TAB ################################
 echo -e '<div id="view5">\n'\
@@ -109,9 +95,7 @@ echo "</xmp>" >> $output
 
 echo -e "\t\t</div>" >> $output          
 
-
 ##############################################################################################
-
 
 #End of HTML document
 echo -e "\t\t</div>\n"\
@@ -119,25 +103,3 @@ echo -e "\t\t</div>\n"\
         "</body>\n"\
         "</html>\n" >> $output
 #open $output
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
