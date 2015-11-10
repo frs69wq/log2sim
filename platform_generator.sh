@@ -41,14 +41,14 @@ as_tag="<AS id=\"AS_"${workflow_dir}"\" routing=\""$routing"\">\n"
 
 # VIP Server
 server="\t<host id=\""$master"\" power=\"5Gf\" core=\"4\"/>\n
-\t<link id=\""$master"_link\" bandwidth=\"10Gbps\" latency=\"500us\"/>\n
-\t<host_link id=\""$master"\" up=\""$master"_link\" 
-down=\""$master"_link\"/>\n\n"
+\t<link id=\""$master"_link\" bandwidth=\"10Gbps\" latency=\"500us\" sharing_policy=\"FULLDUPLEX\"/>\n
+\t<host_link id=\""$master"\" up=\""$master"_link_UP\" 
+down=\""$master"_link_DOWN\"/>\n\n"
 
 # Default LFC
 default_lfc="\t<host id=\""$lfc"\" power=\"5Gf\" core=\"4\"/>\n
-\t<link id=\""$lfc"_link\" bandwidth=\"10Gbps\" latency=\"500us\"/>\n
-\t<host_link id=\""$lfc"\" up=\""$lfc"_link\" down=\""$lfc"_link\"/>\n" 
+\t<link id=\""$lfc"_link\" bandwidth=\"10Gbps\" latency=\"500us\" sharing_policy=\"FULLDUPLEX\"/>\n
+\t<host_link id=\""$lfc"\" up=\""$lfc"_link_UP\" down=\""$lfc"_link_DOWN\"/>\n" 
 
 # Check if default SE is in file_transfer.csv file.
 # If not, add it to the platform file
@@ -56,9 +56,9 @@ default_lfc="\t<host id=\""$lfc"\" power=\"5Gf\" core=\"4\"/>\n
 if ! grep -q $defSE $file_transfer
 then
     default_se="\t<host id=\"ccsrm02.in2p3.fr\" power=\"5Gf\" core=\"4\"/>\n
-\t<link id=\"ccsrm02.in2p3.fr_link\" bandwidth=\"10Gbps\" latency=\"500us\"/>\n
-\t<host_link id=\"ccsrm02.in2p3.fr\" up=\"ccsrm02.in2p3.fr_link\"
- down=\"ccsrm02.in2p3.fr_link\"/>\n"
+\t<link id=\"ccsrm02.in2p3.fr_link\" bandwidth=\"10Gbps\" latency=\"500us\" sharing_policy=\"FULLDUPLEX\"/>\n
+\t<host_link id=\"ccsrm02.in2p3.fr\" up=\"ccsrm02.in2p3.fr_link_UP\"
+ down=\"ccsrm02.in2p3.fr_link_DOWN\"/>\n"
 else
   default_se=""
 fi
@@ -83,8 +83,8 @@ do
         "\\t<host id=\""$2"\" power=\""$4"\" core=\""$3"\">\\n" \
         "\\t\\t <prop id=\"closeSE\" value=\"" $NF "\"/>\\n" \
         "\\t</host>\\n"\
-        "\\t<link id=\""$2"_link\" bandwidth=\""$5"\" latency=\"500us\"/>\\n" \
-        "\\t<host_link id=\""$2"\" up=\""$2"_link\" down=\""$2"_link\"/>\\n"}')
+        "\\t<link id=\""$2"_link\" bandwidth=\""$5"\" latency=\"500us\" sharing_policy=\"FULLDUPLEX\"/>\\n" \
+        "\\t<host_link id=\""$2"\" up=\""$2"_link_UP\" down=\""$2"_link_DOWN\"/>\\n"}')
     for output_xml in $max_sym $max_asym $avg_asym $avg_sym
     do
 	echo -e $worker >>$output_xml 
@@ -108,7 +108,7 @@ sed "1d" $file_transfer | \
          if (bw > max_download_bandwidth[$4]){max_download_bandwidth[$4]=bw};\
        } else {\
          if ($NF == "2") {\
-           if (!($2 in se)){se[$3]}; \
+           if (!($3 in se)){se[$3]}; \
              upload_count[$3]+=1; \
              total_bw[$3] += bw; \
              if (bw > max_bandwidth[$3]){max_bandwidth[$3]=bw};\
