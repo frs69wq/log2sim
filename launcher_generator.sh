@@ -22,7 +22,8 @@ total_particle_number=$(awk '/] Initial number of particles:/''{print $NF}' \
     ${log_dir}/${workflow_dir}/workflow.out)
 
 number_of_gate_jobs=$(awk '/] processor "gate" executed/''{print}' \
-    ${log_dir}/${workflow_dir}/workflow.out | awk 'END{print}' | awk '{print $(NF-1)}')
+    ${log_dir}/${workflow_dir}/workflow.out | awk 'END{print}' | \
+    awk '{print $(NF-1)}')
 
 if [ $cheat != "no" ]
 then 
@@ -55,6 +56,7 @@ echo '#! /bin/bash -u' > $output
 
 echo -e '# Command lines arguments are:\n' \
         '# Platform files: platform_'$workflow_dir'_[max/av]_[a/]symmetric.xml\n' \
+        '                  mock_platform_'$workflow_dir'.xml\n'\
         '# Deployment file: '$deployment_file'\n' \
         '# Initial number particles: '$total_particle_number'\n' \
         '# Number of gate jobs: '$number_of_gate_jobs'\n' \
@@ -89,6 +91,13 @@ do
 
 	echo -e "\n" >> $output
     done
+	echo "echo -e '\\tSimulate on mock'" >>$output
+	echo  'java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar VIPSimulator \
+        simgrid_files/mock_platform_'${workflow_dir}'.xml simgrid_files/'${deployment_file}' \
+        '${total_particle_number}' '${number_of_gate_jobs}' '${gate_input_file}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}'\
+        '${version}' 10000000 ${verbose}' \
+        '1> timings/simulated_time_on_mock_v'${version}'.csv' \
+        '2>csv_files/simulated_file_transfer_on_mock_v'${version}'.csv'  >> $output 
 done
 
 #give execution right to the generated file in .sh
