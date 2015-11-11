@@ -208,4 +208,7 @@ do
     echo -e "  "$footer >> $output_xml
 done   
 
-rm -f se_bandwidth.csv
+if [ $initial != "initial" ]
+then 
+  mv -f se_bandwidth.csv csv_files/
+fi
