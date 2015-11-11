@@ -73,6 +73,11 @@ done
 # Assume that inputs/gate.sh.tar.gz, inputs/merge.sh.tar.gz, and
 # inputs/opengate_version_7.0.tar.gz are at least stored on
 # default SE. If not, add them    
+if $(grep -q "gate_6.2_official_release" $LFC_catalog);
+then
+   sed 's/gate_6.2_official_release/opengate_version_7.0/g' -i $LFC_catalog
+fi
+
 if ! $(grep -q "opengate" $LFC_catalog); 
 then
     echo "inputs/opengate_version_7.0.tar.gz,376927945,$defSE" >> $LFC_catalog
