@@ -370,46 +370,6 @@ ggplot(concurrency, aes(x=Start, y=factor(Count), fill=Count)) +
   xlab("Time (in seconds)") + ylab("Number of Concurrent Transfers")
 ```
 
-### According to data from logs and the VIP database
-
-```{r echo=FALSE, cache=TRUE}
-timings <- read.csv('csv_files/db_dump.csv', header = TRUE, sep = ' ') 
-timings_real <- read.csv('timings/real_times.csv', header = TRUE, sep = ',') 
-# Simplify the job IDs
-timings$JobId <- timings$JobId-min(timings$JobId)
-timings_real$JobId <- timings_real$JobId-min(timings_real$JobId)
-
-queuing_step <- timings[names(timings) %in% c("JobId", "CreationTime", "DownloadStartTime")]
-names(queuing_step)<-c("JobId","Start","End")
-queuing_step$Step<-"Queuing"
-
-download_step <- timings[names(timings) %in% c("JobId", "DownloadStartTime")]
-names(download_step)<-c("JobId","Start")
-download_step$End <- timings$DownloadStartTime+timings_real$DownloadDuration
-download_step$Step <- "Download"
-
-computing_step <- timings[names(timings) %in% c("JobId", "ComputeStartTime")]
-names(computing_step)=c("JobId", "Start")
-computing_step$End <- timings$ComputeStartTime+timings$ComputeDuration
-computing_step$Step <-"Computing"
-
-upload_step<-timings[names(timings) %in% c("JobId", "UploadStartTime")]
-names(upload_step)<-c("JobId","Start")
-upload_step$End <- timings$UploadStartTime+timings_real$UploadDuration
-upload_step$Step <-"Upload"
-
-gantt <- rbind(queuing_step,download_step,computing_step, upload_step)
-
-```
-
-```{r echo=FALSE, fig.height=9}
-ggplot(gantt)+ geom_segment(aes(x=Start, xend=End, y=JobId, yend=JobId, color=Step), size=1.25) + 
-  geom_point(data=timings, aes(x=(DownloadStartTime+TotalDuration), y=JobId)) +
-  scale_color_discrete(breaks=c("Queuing", "Download", "Computing", "Upload"), name="") +
-  scale_y_reverse() + 
-  theme(legend.position="top") + xlab("Time (in seconds)") + ylab("Job Id")
-```
-
 ### Isolation of the file transfer operations
 ```{r echo=FALSE, fig.height=9}
 ggplot(gantt[gantt$Step %in% c("Download", "Upload"),])+ 

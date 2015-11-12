@@ -96,6 +96,8 @@ do
     echo -e "<!-- storage elements -->" >> $output_xml
 done
 
+echo "SE,AVG_ALL,MAX_ALL,AVG_DOWN,MAX_DOWN,AVG_UP,MAX_UP" > se_bandwidth.csv
+
 sed "1d" $file_transfer | \
   awk -F',' '{if ($5 > "0") { \
        bw=$5/($6-990); \
@@ -117,8 +119,8 @@ sed "1d" $file_transfer | \
          } else { \
            if (! ($4 in se)) {se[$4]};
              test_count[$4] = 1; \
-             total_bw[$4] = 125000; \
-             max_bandwidth[$4] = 1250000; \
+             total_bw[$4] = 0; \
+             max_bandwidth[$4] = 0; \
           }\
        }\
     }} END { \
