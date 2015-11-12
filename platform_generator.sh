@@ -119,31 +119,34 @@ sed "1d" $file_transfer | \
          } else { \
            if (! ($4 in se)) {se[$4]};
              test_count[$4] = 1; \
-             total_bw[$4] = 0; \
-             max_bandwidth[$4] = 0; \
+             test_bw[$4] = 100; \
           }\
        }\
     }} END { \
       for (id in se) {\
-         printf id","(total_bw[id]/(download_count[id]+upload_count[id]+test_count[id]))","\
-                max_bandwidth[id]",";
-         if (download_count[id] > 0){\
-           printf (total_download_bw[id]/download_count[id])","\
-                  max_download_bandwidth[id]"," \
-         } else {\
-           printf "0,0,"
-         } \
-         if (upload_count[id] > 0){\
-           print (total_upload_bw[id]/upload_count[id])","\
-                  max_upload_bandwidth[id]\
-         } else {\
-           print "0,0"
-         } \
+         if ((download_count[id]+upload_count[id]) > 0){\
+           printf id","(total_bw[id]/(download_count[id]+upload_count[id]))","\
+                  max_bandwidth[id]",";
+           if (download_count[id] > 0){\
+             printf (total_download_bw[id]/download_count[id])","\
+                    max_download_bandwidth[id]"," \
+           } else {\
+             printf "0,0,"
+           } \
+           if (upload_count[id] > 0){\
+             print (total_upload_bw[id]/upload_count[id])","\
+                    max_upload_bandwidth[id]\
+           } else {\
+             print "0,0"
+           } \
+        } else {\
+          print id","test_bw[id]","test_bw[id]",0,0,0,0"
+        }\
       }\
     }' >> se_bandwidth.csv
 
 
-cat se_bandwidth.csv | while read line
+sed "1d" se_bandwidth.csv | while read line
 do
    se=$(echo $line | 
        awk -F',' '{print \
