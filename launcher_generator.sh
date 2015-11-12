@@ -77,7 +77,7 @@ echo -e ' verbose=${1:-""}\n'\
         'fi\n' >> $output
 
 # Order of argument: Platform Deployment TotalParticleNumber NmuberOfGateJob SOSTime NumberOfMergeJob cpuMergeTime eventsPerSec LogFile
-for version in 1 2
+for version in 2
 do
     echo "echo  Use version '$version' of the simulator" >>$output
     for platform_type in "max_symmetric" "max_asymmetric" "avg_symmetric" "avg_asymmetric"
