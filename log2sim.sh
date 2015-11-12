@@ -102,13 +102,15 @@ do
     if ! grep -q "$suffix" internet_suffixes.txt ; then
 	new_name=$(grep -w $worker_name $db_dump | awk '{print $3}' | uniq)
 	new_suffix=$(echo $new_name | awk -F'.' '{print $NF}')
-    
+	
 	new_line=$(echo $line | awk -F',' -v s=$new_suffix -v n=$new_name \
 	    '{sub($7,s,$7); sub($2,n,$2); gsub(" ",",",$0); print $0}')
 	sed "s/$line/$new_line/g" -i $worker_nodes
 	sed "s/$worker_name/$new_name/g" -i $file_transfer
     fi
 done
+# remove lines with missing information in file transfers
+sed '/,,/d' -i $file_transfer
 
 info "End of log file extraction."
 info "\t Worker nodes: $worker_nodes ... created."
