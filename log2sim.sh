@@ -79,6 +79,16 @@ then
    sed 's/gate_6.2_official_release/opengate_version_7.0/g' -i $LFC_catalog
 fi
 
+if $(grep -q "release_Gate7.1_all" $LFC_catalog);
+then
+   sed 's/release_Gate7.1_all/opengate_version_7.0/g' -i $LFC_catalog
+fi
+
+if $(grep -q "xcheng_31_10_14_release" $LFC_catalog);
+then
+   sed 's/xcheng_31_10_14_release/opengate_version_7.0/g' -i $LFC_catalog
+fi
+
 if ! $(grep -q "opengate" $LFC_catalog); 
 then
     echo "inputs/opengate_version_7.0.tar.gz,376927945,$defSE" >> $LFC_catalog
