@@ -24,7 +24,7 @@ total_transfer_times="real_times.csv"
 chk_file=$(awk '/] Total running time:/''{print}' $input_log)
 if [ "$chk_file" == "" ]
 then
- info "Uncomplete log ... ignore"
+ info "Incomplete log ... ignore"
  exit
 fi
 
