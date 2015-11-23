@@ -101,7 +101,7 @@ echo "SE,AVG_ALL,MAX_ALL,AVG_DOWN,MAX_DOWN,AVG_UP,MAX_UP" > se_bandwidth.csv
 sed "1d" $file_transfer | \
   awk -F',' '{if ($5 > "0") { \
        bw=$5/($6-990); \
-       if ($NF == "1" && $5 > "20") {\
+       if ($NF == "1" && $5 > 20) {\
          if (! ($4 in se)) {se[$4]}; \
          download_count[$4]+=1; \
          total_bw[$4] += bw; \
