@@ -129,7 +129,6 @@ fi
 upload_duration=$(awk '/] UploadCommand=lcg-cr/' $input_log | \
     awk -F"Source=" '{gsub("="," ",$2); print $2}' | \
     awk '{gsub(/:.*/,"",$1); gsub(/:.*/,"",$3); gsub("ms","",$7);printf '$timestamp'","'$job_id' ",'$machine_name',"$3","$5","$7","; if ($5==12) {print "0"} else {print "1"}}' | tee -a $transfer_info | awk -F',' '{if ($5 != 12){total_time+=$6};}END{print total_time/1000}')
-info $upload_duration
 
 # get information about download transfers 
 download_duration=$(awk '/DownloadCommand=lcg-cp.*ms$/' $input_log | awk -F"Source=" '{print $2}'| \
