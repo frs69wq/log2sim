@@ -200,8 +200,8 @@ sed s/WORKFLOW_NAME/$workflow_dir/g Analysis.Rmd > Analysis_$workflow_dir.Rmd
 #                                                                            #
 ##############################################################################
 
-info "Moving produced files in ../results/complete-$workflow_dir"
-output_dir="../results/complete-$workflow_dir"
+info "Moving produced files in ../results/$workflow_dir"
+output_dir="../results/$workflow_dir"
 if [ ! -d $output_dir ]
 then
     mkdir $output_dir
