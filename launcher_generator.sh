@@ -31,8 +31,6 @@ then
     total_particle_number=$number_of_gate_jobs
 fi
 
-gate_input_file=$(awk -F',' '/zip/ {gsub("inputs/","",$1); gsub(".zip","", $1); print $1}' LfcCatalog_$workflow_dir.csv) 
-
 sos_time=300
 
 number_of_merge_jobs=$(awk '/] processor "merge" executed/''{print}' \
@@ -61,7 +59,6 @@ echo -e '# Command lines arguments are:\n' \
         '# Deployment file: '$deployment_file'\n' \
         '# Initial number particles: '$total_particle_number'\n' \
         '# Number of gate jobs: '$number_of_gate_jobs'\n' \
-        '# Gate input file: '$gate_input_file'\n' \
         '# SoS time: '$sos_time'\n' \
         '# Number of merge jobs: '$number_of_merge_jobs'\n' \
         '# CPU merge time: '$cpu_merge_time'\n' \
@@ -85,7 +82,7 @@ do
 	echo "echo -e '\\tSimulate on $platform_type'" >>$output
 	echo  'java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar VIPSimulator \
         simgrid_files/platform_'${workflow_dir}'_'${platform_type}'.xml simgrid_files/'${deployment_file}' \
-        '${total_particle_number}' '${number_of_gate_jobs}' '${gate_input_file}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}'\
+        '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}'\
         '${version}' 10000000 ${verbose}' \
         '1> timings/simulated_time_on_'${platform_type}'_v'${version}'.csv' \
         '2>csv_files/simulated_file_transfer_on_'${platform_type}'_v'${version}'.csv'  >> $output 
@@ -95,7 +92,7 @@ do
 	echo "echo -e '\\tSimulate on mock'" >>$output
 	echo  'java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar VIPSimulator \
         simgrid_files/mock_platform_'${workflow_dir}'.xml simgrid_files/'${deployment_file}' \
-        '${total_particle_number}' '${number_of_gate_jobs}' '${gate_input_file}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}'\
+        '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}'\
         '${version}' 10000000 ${verbose}' \
         '1> timings/simulated_time_on_mock_v'${version}'.csv' \
         '2>csv_files/simulated_file_transfer_on_mock_v'${version}'.csv'  >> $output 
