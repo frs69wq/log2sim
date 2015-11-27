@@ -19,7 +19,6 @@ catalog=${2:-input_files_info.csv}
 machine_info="worker_nodes.csv"
 transfer_info="file_transfer.csv"
 total_transfer_times="real_times.csv"
-
 # checking if the file is empty (Job did not complete successfully)
 chk_file=$(awk '/] Total running time:/''{print}' $input_log)
 if [ "$chk_file" == "" ]
@@ -30,6 +29,7 @@ fi
 
 # Get the job id as known by VIP
 job_id=$(awk -F'=' '/^JOBID=/''{print $2}' $input_log)
+job_type=$(echo $input_log | awk -F'/' '{print $NF}' | cut -d'.' -f 1)
 
 ################################################################################
 ###            Extraction of information related to worker nodes             ###
@@ -158,6 +158,7 @@ fi
 
 array_file_info=($(awk '/] lcg-cp -v --connect-timeout/{nr[NR]; nr[NR+2]}; NR in nr' $input_log | \
     awk -F'/' '{print $NF}' | awk 'NR%2{printf $0" ";next;}1' | \
+    awk -F'=' '{split($3,a," ", seps); sub($3,a[1]" Destination",$0); print}' | \
     awk -F'/' '{gsub("="," ",$0); gsub(/\[.*.\]/,"",$0);print}' | \
     awk '{printf $1","$9; if ($2 == "DownloadCommand") print ","$5; else print ",'$close_SE'"}'))
 
@@ -166,11 +167,11 @@ do
   filename=$(echo $fl | awk -F',' '{gsub("dsarrut_","",$1); print $1}')
   se=$(echo $fl | awk -F',' '{print $3}')
   filesize=$(echo $fl | awk -F',' '{print $2}')
-  if ! grep -q "$filename" $catalog
+  if ! grep -q "inputs/$job_type/$filename" $catalog
   then
     if [[ $filesize =~ ^[0-9]+$ ]] && [[ $filename != "DownloadCommand" ]]
     then
-       echo "inputs/$filename,$filesize,$se" >> $catalog;
+       echo "inputs/$job_type/$filename,$filesize,$se" >> $catalog;
     fi
   else
        { rm -f $catalog && awk -F',' -v n="$filename" -v s="$se" '{if (match($1,n) && !match($3,s)){sub($3,$3":"s,$3);gsub(" ",",",$0)}}1' > $catalog;} < $catalog ;
