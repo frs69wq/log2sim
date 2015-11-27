@@ -70,38 +70,6 @@ for log_file in  `ls ${log_dir}/${workflow_dir}/out/*.sh.out`; do
     ./log_extractor.sh $log_file ${LFC_catalog}
 done
 
-###  Sanity checks  ###
-# Assume that inputs/gate.sh.tar.gz, inputs/merge.sh.tar.gz, and
-# inputs/opengate_version_7.0.tar.gz are at least stored on
-# default SE. If not, add them    
-if $(grep -q "gate_6.2_official_release" $LFC_catalog);
-then
-   sed 's/gate_6.2_official_release/opengate_version_7.0/g' -i $LFC_catalog
-fi
-
-if $(grep -q "release_Gate7.1_all" $LFC_catalog);
-then
-   sed 's/release_Gate7.1_all/opengate_version_7.0/g' -i $LFC_catalog
-fi
-
-if $(grep -q "xcheng_31_10_14_release" $LFC_catalog);
-then
-   sed 's/xcheng_31_10_14_release/opengate_version_7.0/g' -i $LFC_catalog
-fi
-
-if ! $(grep -q "opengate" $LFC_catalog); 
-then
-    echo "inputs/opengate_version_7.0.tar.gz,376927945,$defSE" >> $LFC_catalog
-fi
-if ! $(grep -q "gate.sh.tar.gz" $LFC_catalog); 
-then
-    echo "inputs/gate.sh.tar.gz,73043,$defSE" >> $LFC_catalog
-fi
-if ! $(grep -q "merge.sh.tar.gz" $LFC_catalog); 
-then
-    echo "inputs/merge.sh.tar.gz,90104445,$defSE" >> $LFC_catalog
-fi
-
 # Checking the host name format. 
 # Test if the suffix of the host name has a match in internet_suffixes.txt
 # If it misses a proper suffix, we use the VIP database to complete the name.
