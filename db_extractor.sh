@@ -28,7 +28,7 @@ then
     info "File $output does not exist. Create it."
     echo "JobId Command Name Site CreationTime QueuingDuration "\
 "DownloadStartTime DownloadDuration ComputeStartTime ComputeDuration "\
-"UploadStartTime UploadDuration TotalDuration" > $output
+"UploadStartTime UploadDuration TotalDuration logFile" > $output
 fi
 
 # Prepare the SQL query
@@ -41,8 +41,8 @@ DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), RUNNING) as START_COMPUTE,
 DATEDIFF('SECOND',RUNNING,UPLOAD) as COMPUTE_TIME,
 DATEDIFF('SECOND',(SELECT MIN(QUEUED) FROM JOBS), UPLOAD) as START_UPLOAD,
 DATEDIFF('SECOND',UPLOAD, END_E) as UPLOAD_TIME,
-DATEDIFF('SECOND',DOWNLOAD,END_E) as TOTAL_TIME
-from JOBS WHERE STATUS='COMPLETED' AND NODE_NAME IS NOT NULL ORDER BY ID"
+DATEDIFF('SECOND',DOWNLOAD,END_E) as TOTAL_TIME, FILE_NAME
+from JOBS WHERE STATUS='COMPLETED' ORDER BY ID"
 
 
 java -cp ${db_driver} org.h2.tools.Shell \
@@ -51,3 +51,39 @@ java -cp ${db_driver} org.h2.tools.Shell \
      sed -e '1d' -e '$d' -e 's/ *| */ /g' >> $output \
 || info "SQL query failed."
 
+sed '1d' $output | while read line
+do
+    fields=$(echo $line | awk '{print $1,$2,$3,$5,$6,$7,$NF}')
+    set -- $fields
+    # $1 = job id
+    # $2 = command
+    # $3 = worker name
+    # $4 (in fields) = $5 (in line) = creation time
+    # $5 (in fields) = $6 (in line) = queuing time
+    # $6 (in fields) = $7 (in line) = download start time
+    # $7 (in fields) = $NF (in line) = log file name
+
+    if [[ $3 == null ]] 
+    then
+	
+	input_log=$log_dir/$workflow_dir/out/$7.sh.out
+	info "Bad entry for job $1. Look to " \
+	    "${input_log} to correct it".
+	machine_name=$(awk -F'=' '/^HOSTNAME/ {print $NF}' $input_log)
+	site=$(awk -F'=' '/^SITE_NAME/ {print $NF}' $input_log)
+	
+	download_duration=$(awk '/] Input download/''{print}' $input_log | \
+	    awk '{print $(NF-1)}')
+	compute_time=$(awk '/] Execution time:/''{print}' $input_log | \
+	    awk '{print $(NF-1)}')
+	upload_duration=$(awk '/] Results upload/''{print}' $input_log | \
+	    awk '{print $(NF-1)}')    
+	total_time=$(awk '/] Total running/''{print}' $input_log | \
+	    awk '{print $(NF-1)}')
+	compute_start=$(($6 + $download_duration))
+	upload_start=$(($compute_start + $compute_time))
+	new_line=$(echo -e $1 $2 $machine_name $site $4 $5 $6 $download_duration \
+	    $compute_start $compute_time $upload_start $upload_duration $total_time $7)
+	sed "s/$line/$new_line/g" -i $output
+    fi
+done
