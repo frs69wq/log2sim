@@ -64,26 +64,33 @@ do
     # $7 (in fields) = $NF (in line) = log file name
 
     if [[ $3 == null ]] 
-    then
-	
+    then	
 	input_log=$log_dir/$workflow_dir/out/$7.sh.out
-	info "Bad entry for job $1. Look to " \
+	info "\tBad entry for job $1. Look to " \
 	    "${input_log} to correct it".
 	machine_name=$(awk -F'=' '/^HOSTNAME/ {print $NF}' $input_log)
 	site=$(awk -F'=' '/^SITE_NAME/ {print $NF}' $input_log)
 	
-	download_duration=$(awk '/] Input download/''{print}' $input_log | \
-	    awk '{print $(NF-1)}')
-	compute_time=$(awk '/] Execution time:/''{print}' $input_log | \
-	    awk '{print $(NF-1)}')
-	upload_duration=$(awk '/] Results upload/''{print}' $input_log | \
-	    awk '{print $(NF-1)}')    
-	total_time=$(awk '/] Total running/''{print}' $input_log | \
-	    awk '{print $(NF-1)}')
-	compute_start=$(($6 + $download_duration))
-	upload_start=$(($compute_start + $compute_time))
-	new_line=$(echo -e $1 $2 $machine_name $site $4 $5 $6 $download_duration \
-	    $compute_start $compute_time $upload_start $upload_duration $total_time $7)
-	sed "s/$line/$new_line/g" -i $output
+	if [[ $machine_name == "" ]]
+	then
+	    # means the log file is absent
+	    info "\tMissing log file, discard this job"
+	    sed "/$line/d" -i $output
+	else
+	    download_duration=$(awk '/] Input download/''{print}' $input_log | \
+		awk '{print $(NF-1)}')
+	    compute_time=$(awk '/] Execution time:/''{print}' $input_log | \
+		awk '{print $(NF-1)}')
+	    upload_duration=$(awk '/] Results upload/''{print}' $input_log | \
+		awk '{print $(NF-1)}')    
+	    total_time=$(awk '/] Total running/''{print}' $input_log | \
+		awk '{print $(NF-1)}')
+	    compute_start=$(($6 + $download_duration))
+	    upload_start=$(($compute_start + $compute_time))
+	    new_line=$(echo -e $1 $2 $machine_name $site $4 $5 $6 \
+		$download_duration $compute_start $compute_time $upload_start \
+		$upload_duration $total_time $7)
+	    sed "s/$line/$new_line/g" -i $output
+	fi
     fi
 done
