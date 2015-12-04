@@ -10,192 +10,52 @@ library(ggplot2)
 library(plyr)
 ```
 
-## Statistics on Worker Nodes
+```{r echo=FALSE, cache=TRUE}
+get_suffix <- function(x) {
+  tail(strsplit(as.character(x),"[.]")[[1]], n=1)
+}
+```
+
 ```{r echo=FALSE, cache=TRUE}
 workers <- read.csv('csv_files/worker_nodes.csv', header=TRUE, sep=',')
+
+# Remove unit and convert to numeric values
 workers$MIPS <-as.numeric(sub("Mf", "", workers$MIPS))
+
+# Add a column to store the suffix of local SE
+workers$SESuffix<-sapply(workers$CloseSE, get_suffix)
 ```
 
-### Distribution of Worker Nodes by Country
-
-```{r echo=FALSE, fig.height=3.5}
-ggplot(workers, aes(factor(Country))) + geom_bar(aes(fill= ..count..)) + guides(fill=FALSE) +
-    xlab("Country") + ylab("Number of worker nodes")
-```
-
-### With a split by number of cores
-
-```{r echo=FALSE, fig.height=4}
-ggplot(workers, aes(x=Country, fill=factor(Core))) + geom_bar() + scale_fill_discrete(name="#Cores") +
-  xlab("Country") + ylab("Number of worker nodes") + theme(legend.position="top")
-```
-
-### Split by BogoMIPS and Country
-
-```{r echo=FALSE, fig.height=3.5}
-ggplot(workers, aes(x=round(MIPS, -2), fill=factor(Country))) + geom_bar(binwidth=100) +
-  xlab("BogoMIPS") + ylab("Number of worker nodes")+ scale_fill_discrete(name="Country") +
-  theme(legend.position="top")
-```
-
-### CloseSE vs. Grid Site by country
-
-```{r echo=FALSE, cache=TRUE}
-workers$SESuffix<-sapply(workers$CloseSE, function(x) tail(strsplit(as.character(x),"[.]")[[1]], n=1))
-```
-```{r echo=FALSE, fig.height=5.25}
-ggplot(workers,aes(x=SiteName, y=CloseSE)) + geom_point()+ facet_grid(SESuffix~Country, scales="free") +
-  theme(axis.text.x = element_text(angle = 50, hjust = 1)) + xlab("Grid Site") 
-```
-
-### Distribution of Worker nodes by Grid Site
-
-```{r echo=FALSE, fig.height=4}
-ggplot(workers, aes(factor(SiteName))) + geom_bar(aes(fill= ..count..)) + guides(fill=FALSE) + 
-  facet_wrap(~Country, scales="free_x", nrow=1) + theme(axis.text.x = element_text(angle = 50, hjust = 1)) + 
-  xlab("Grid Site") + ylab("Number of worker nodes")
-```
-
-### With a split by number of cores
-
-```{r echo=FALSE, fig.height=4.75}
-ggplot(workers, aes(x=SiteName, fill=factor(Core))) + geom_bar() + scale_fill_discrete(name="#Cores") + 
-  facet_wrap(~Country, scales="free_x", nrow=1) + theme(axis.text.x = element_text(angle = 50, hjust = 1)) + 
-  xlab("Grid Site") + ylab("Number of worker nodes") + theme(legend.position="top")
-```
-
-### Split by BogoMIPS, Grid Site, and Country
-
-```{r echo=FALSE, fig.height=9}
-ggplot(workers, aes(x=round(MIPS, -2), fill=factor(SiteName))) + geom_bar(binwidth=100) +
-  xlab("BogoMIPS") + ylab("Number of worker nodes")+ scale_fill_discrete(name="Grid Site") +
-  facet_wrap(~Country, ncol=2) #+ theme(axis.text.x = element_text(angle = 50, hjust = 1))  
-  #theme(legend.position="top")
-```
-
-\newpage
-
-## Statistics on file transfers
 ```{r echo=FALSE, cache=TRUE}
 transfers <- read.csv('csv_files/file_transfer.csv', header = TRUE, sep=',')
 
-# Remove entry with 0 file size
+# Remove entries with 0 file size, if any
 transfers = transfers[transfers$FileSize!=0,]
 
 # Simplify the job IDs
 transfers$JobId <- transfers$JobId-min(transfers$JobId)
 
-# Add columns to store the suffixes of source and destination SE
-transfers$src_suffix<-sapply(transfers$Source, function(x) tail(strsplit(as.character(x),"[.]")[[1]], n=1))
-transfers$dst_suffix<-sapply(transfers$Destination, function(x) tail(strsplit(as.character(x),"[.]")[[1]], n=1))
+# Convert durations from milliseconds to seconds 
+transfers$Time<-transfers$Time/1000
 
+# Add columns to store the suffixes of source and destination SE
+transfers$src_suffix<-sapply(transfers$Source, get_suffix)
+transfers$dst_suffix<-sapply(transfers$Destination,  get_suffix)
 ```
 
-### Distribution of Upload Test durations (in milliseconds)
 ```{r echo=FALSE, cache=TRUE}
 upload_tests <- transfers[transfers$UpDown == 0,]
-
-upload_tests$short_long = 
-  sapply(upload_tests$Time, function(x) if (x > 1500) {"Long"} else {"Short"})
-# Have the facet in the logical order rather than in the alphabetical one
-upload_tests$short_long = factor(upload_tests$short_long, levels = c("Short", "Long"))
-```
-```{r echo=FALSE, cache=TRUE}
-summary(upload_tests$Time)
-```
-
-### By Job Id
-```{r echo=FALSE,fig.height=3.25}
-ggplot(upload_tests, aes(x=JobId, y=Time)) + geom_point() + 
-  facet_wrap(~short_long, scales="free_y") + 
-  ylab ("Duration (in milliseconds)") + xlab ("Job ID")
-```
-
-### By Destination (darkness represents frequency)
-```{r echo=FALSE,fig.height=4}
-ggplot(upload_tests, aes(x=Time, y=Destination)) + geom_point(alpha=0.2, size=3) +
-  theme(axis.text.x = element_text(angle = 50, hjust = 1)) + #theme_bw() +
-  xlab ("Duration (in milliseconds)") + facet_grid(dst_suffix~., scales="free")
-```
-
-### Impact of Source and Destination countries on "Long" Upload Tests
-```{r echo=FALSE}
-ggplot(upload_tests[upload_tests$short_long == "Long",], 
-       aes(x=Source, y=Destination, color=factor(Time),size=factor(Time))) + 
-  geom_point() + facet_grid(src_suffix~dst_suffix, scales="free") +
-  scale_color_discrete(name="Duration") + scale_size_discrete(name="Duration") + 
-  theme(axis.text.x = element_text(angle = 50, hjust = 1))
-```
-
-\newpage
-
-### Distribution of Download durations (in seconds)
-```{r echo=FALSE, cache=TRUE}
+uploads <- transfers[transfers$UpDown == 1,]
 downloads <- transfers[transfers$UpDown == 2,]
-# Convert durations in seconds 
-downloads$Time<-downloads$Time/1000
 ```
+
 ```{r echo=FALSE, cache=TRUE}
-summary(downloads$Time)
+usedSE <- merge(uploads[names(uploads) %in% c("Source", "Destination","src_suffix", "dst_suffix")],
+                workers[names(workers) %in% c("Name", "SiteName")],
+                by.x="Source", by.y="Name")
+names(usedSE) <- c("Name", "CloseSE", "Country", "SESuffix","SiteName")
 ```
 
-### Source SE vs. Job Id for each File Size
-```{r echo=FALSE,fig.height=8}
-ggplot(downloads, aes(x=JobId, y=Source, size=Time)) + geom_point() + 
-  scale_size_continuous(name="Duration", breaks=c(seq(0,40,by=10), 
-                                                  seq(50, max(round(downloads$Time)), 
-                                                      by=50)), 
-                        range=c(1,6)) +
-  facet_wrap(~FileSize, ncol=1, scales="free_y") + 
-  ylab ("Source SE") + xlab ("Job ID")
-
-```
-
-### File Size vs. Job Id for each Source SE
-```{r echo=FALSE,fig.height=8}
-ggplot(downloads, aes(x=JobId, y=factor(FileSize), size=Time)) + geom_point() + 
-  scale_size_continuous(breaks=c(seq(0, max(round(downloads$Time)), 
-                                     by=50)), 
-                        range=c(1,6), name="Duration") +
-  facet_wrap(~Source, ncol=1, scales="free_y") + 
-  ylab ("File Size (in Bytes)") + xlab ("Job ID")
-
-```
-
-\newpage
-
-### Distribution of upload durations (in seconds)
-```{r echo=FALSE, cache=TRUE}
-# Remove the uploads that corresponds to the Merge job (assuming they are the last two rows)
-uploads <- head(transfers[transfers$UpDown == 1,], n=-2)
-# Convert durations in seconds 
-uploads$Time<-uploads$Time/1000
-```
-```{r echo=FALSE}
-summary(uploads$Time)
-```
-
-### Distribution of upload file sizes (in bytes)
-```{r echo=FALSE}
-summary(uploads$FileSize)
-```
-
-### Size of File to Upload vs. Job Id 
-```{r echo=FALSE,fig.height=4}
-ggplot(uploads, aes(x=JobId, y=FileSize)) + geom_point() + 
-  ylab ("File Size") + xlab ("Job ID") + geom_smooth(method="lm")
-```
-
-### Destination SE vs. Job Id for each Worker Node Country
-```{r echo=FALSE,fig.height=8}
-ggplot(uploads, aes(x=JobId, y=Destination, size=Time)) + geom_point() + 
-  facet_wrap(~src_suffix, ncol=1, scales="free_y") + 
-  scale_size_continuous(name="Duration")+ ylab ("Destination SE") + xlab ("Job ID")
-
-```
-
-## Statistics on SE connectivity
-### Bandwidths as computed during the log extraction
 ```{r echo=FALSE, cache=TRUE}
 bandwidths_raw <-read.csv('csv_files/se_bandwidth.csv', header=TRUE, sep=',')
 
@@ -218,7 +78,229 @@ bandwidths$SE <- factor(bandwidths$SE, levels=sort(unique(bandwidths$SE)), order
 bandwidths = bandwidths[!names(bandwidths) %in% "variable"]
 ```
 
-```{r echo=FALSE, fig.height=4}
+```{r echo=FALSE, cache=TRUE}
+timings <- read.csv('csv_files/db_dump.csv', header = TRUE, sep = ' ') 
+# Simplify the job IDs
+timings$JobId <- timings$JobId-min(timings$JobId)
+timings$JobSeq <- as.numeric(row.names(timings))
+
+# Identify the merge job
+mergeId <- timings[timings$Command=="merge.sh",]$JobId
+mergeSeq <- timings[timings$Command=="merge.sh",]$JobSeq
+
+queuing_step <- timings[names(timings) %in% c("JobSeq", "CreationTime", "DownloadStartTime")]
+names(queuing_step)<-c("Start","End", "JobId")
+queuing_step$Step<-"Queuing"
+
+download_step <- timings[names(timings) %in% c("JobSeq", "DownloadStartTime")]
+names(download_step)<-c("Start","JobId")
+download_step$End <- timings$DownloadStartTime+timings$DownloadDuration
+download_step$Step <- "Download"
+
+computing_step <- timings[names(timings) %in% c("JobSeq", "ComputeStartTime")]
+names(computing_step)=c("Start", "JobId")
+computing_step$End <- timings$ComputeStartTime+timings$ComputeDuration
+computing_step$Step <-"Computing"
+
+upload_step<-timings[names(timings) %in% c("JobSeq", "UploadStartTime")]
+names(upload_step)<-c("Start", "JobId")
+upload_step$End <- timings$UploadStartTime+timings$UploadDuration
+upload_step$Step <-"Upload"
+
+gantt <- rbind(queuing_step,download_step,computing_step, upload_step)
+```
+
+```{r echo=FALSE, cache=TRUE}
+binwidth=10
+find_bins <- function(origin, s, e, end) {
+  c(rep(0,(s-origin)/binwidth), 
+    rep(1, (e-s)/binwidth), 
+    rep(0,(end-e)/binwidth))
+}
+
+df <-gantt[gantt$Step %in% c("Download", "Upload"),]
+origin <- floor(min(df$Start)/binwidth)*binwidth
+end<- ceiling(max(df$End)/binwidth)*binwidth
+bins = ddply(df,.(JobId,Step), 
+             function(x) find_bins(origin, 
+                                   floor(min(x$Start)/binwidth)*binwidth,
+                                   ceiling(max(x$End)/binwidth)*binwidth, end))
+bins=bins[,-1]
+names(bins) = c("Step", seq(origin, end-binwidth, by=binwidth))
+
+concurrency = melt(ddply(bins,.(Step), colwise(sum)), 
+                   id.vars="Step", value.name="Count", variable.name="Start")
+concurrency=concurrency[concurrency$Count>0,]
+concurrency$Start <- as.integer(as.character(concurrency$Start))
+```
+
+## Gantt chart of the workflow execution 
+
+```{r echo=FALSE, fig.height=8.5}
+ggplot(gantt)+ geom_segment(aes(x=Start, xend=End, y=JobId, yend=JobId, color=Step), size=1.25) + 
+  geom_point(data=timings, aes(x=(DownloadStartTime+TotalDuration), y=JobSeq)) +
+  scale_color_discrete(breaks=c("Queuing", "Download", "Computing", "Upload"), name="") +
+  scale_y_reverse() + 
+  theme(legend.position="top") + xlab("Time (in seconds)") + ylab("Jobs")
+```
+
+\newpage
+
+## Characterization of the Worker Nodes used for the execution of the workflow
+```{r echo=FALSE, fig.height=4.25}
+ggplot(workers, aes(x=SiteName, fill=factor(Core))) + geom_bar() + scale_fill_discrete(name="#Cores") + 
+  facet_wrap(~Country, scales="free_x", nrow=1) + theme(axis.text.x = element_text(angle = 50, hjust = 1)) + 
+  xlab("Grid Site") + ylab("Number of worker nodes") + theme(legend.position="top")
+```
+
+```{r echo=FALSE, fig.height=4.25}
+ggplot(workers, aes(x=round(MIPS, -2), fill=factor(SiteName))) + geom_bar(binwidth=100) +
+  xlab("BogoMIPS") + ylab("Number of worker nodes")+ scale_fill_discrete(name="Grid Site") +
+  facet_wrap(~Country) + theme(axis.text.x = element_text(angle = 50, hjust = 1)) +
+  theme(legend.position="top") + guides(fill = guide_legend(nrow = 2)) 
+```
+
+\newpage
+
+### Distribution of queuing time by grid site
+
+```{r echo=FALSE, fig.height=4.5}
+ggplot(timings, aes(x=Site, y=QueuingDuration))+ geom_boxplot() + 
+  theme(axis.text.x = element_text(angle = 50, hjust = 1)) + 
+  ylab("Queuing Time (in seconds)") + xlab("") +
+  stat_summary(fun.y=mean, geom="line", aes(group=1, color="red")) + guides(color=FALSE)
+```
+
+### CloseSE vs. Grid Site by country
+
+```{r echo=FALSE, fig.height=4.5}
+ggplot(workers, aes(x=SiteName, y=CloseSE)) + 
+  geom_point(aes(color="Declared"), size=2.5) + 
+  geom_point(data=usedSE, aes(color="Used"), size=2.5, 
+             position=position_jitter(width=0.2,height=0.1)) + 
+  scale_color_discrete(breaks=c("Declared", "Used"), labels=c("Declared", "Used"), name="") +
+  facet_grid(SESuffix~Country, scales="free") + xlab("") + ylab("Prefered Storage Element") +
+  theme(axis.text.x = element_text(angle = 50, hjust = 1)) + 
+  theme(legend.position="top")
+```
+
+\newpage
+
+## Characterization of the File Transfers done during the execution of the workflow
+
+### Distribution of Upload Test durations (in milliseconds)
+```{r echo=FALSE, cache=TRUE}
+summary(upload_tests$Time)
+```
+
+### By Destination (darkness represents frequency)
+```{r echo=FALSE,fig.height=7.5}
+ggplot(upload_tests, aes(x=Time, y=Destination)) + geom_point(alpha=0.2, size=3) +
+  xlab ("Duration (in seconds)") + facet_grid(dst_suffix~., scales="free")
+```
+
+\newpage
+
+### Distribution of GATE download durations (in seconds)
+```{r echo=FALSE, cache=TRUE}
+summary(downloads[downloads$JobId != mergeId,]$Time)
+```
+
+### By Source for each file size
+```{r echo=FALSE,fig.height=8}
+ggplot(downloads[downloads$JobId != mergeId,], aes(x=Source, y=Time, fill=factor(FileSize))) + 
+  geom_boxplot() + facet_grid(FileSize~., scales="free_y", drop=TRUE) +
+  xlab ("") + ylab ("Duration (in seconds)") + 
+  theme(axis.text.x = element_text(angle = 50, hjust = 1)) + 
+  guides(fill=FALSE)
+```
+
+\newpage
+
+### Distribution of GATE upload durations (in seconds)
+```{r echo=FALSE}
+summary(uploads[uploads$JobId != mergeId,]$Time)
+```
+
+```{r echo=FALSE,fig.height=7.5}
+ggplot(uploads[uploads$JobId != mergeId,], aes(x=FileSize, y=Time)) + geom_point() + 
+  facet_wrap(~Destination, ncol=1, scales = "free_y") + 
+  ylab ("Duration (in seconds") + xlab ("File Size (in Bytes)")
+
+```
+
+### Distribution of GATE upload sizes (in Bytes)
+```{r echo=FALSE}
+summary(uploads[uploads$JobId != mergeId,]$FileSize)
+```
+
+\newpage
+
+### Distribution of Merge download durations (in seconds)
+```{r echo=FALSE}
+# skip the first two downloads (wrapper and input files)
+summary(tail(downloads[downloads$JobId == mergeId,], -2)$Time)
+```
+
+```{r echo=FALSE,fig.height=7.5}
+# skip the first two downloads (wrapper and input files)
+ggplot(tail(downloads[downloads$JobId == mergeId,], -2), aes(x=FileSize, y=Time)) + geom_point() + 
+  facet_wrap(~Source, ncol=1, scales = "free_y") + 
+  ylab ("Duration (in seconds") + xlab ("File Size (in Bytes)")
+
+```
+
+### Distribution of Merge download sizes (in Bytes)
+```{r echo=FALSE}
+# skip the first two downloads (wrapper and input files)
+summary(tail(downloads[downloads$JobId == mergeId,], -2)$FileSize)
+```
+
+## Statistics on SE connectivity
+```{r echo=FALSE}
+downloads$Bandwidth <- (downloads$FileSize/(downloads$Time-0.99))/1000
+uploads$Bandwidth <- (uploads$FileSize/(uploads$Time-0.99))/1000
+df = downloads[names(downloads) %in% c("Source", "Bandwidth")]
+names(df) <- c("SE", "Bandwidth")
+df$UpDown <-"Uplink"
+df2 = uploads[names(uploads) %in% c("Destination", "Bandwidth")]
+names(df2) <- c("SE", "Bandwidth")
+df2$UpDown <-"Downlink"
+                    
+individual_bw = rbind(df,df2)
+```
+### A view on bandwidth distribution
+```{r echo=FALSE, fig.height=8.5}
+ggplot(individual_bw, aes(x=SE, y=Bandwidth)) + 
+  geom_boxplot() + 
+  facet_wrap(~UpDown, scales="free") + scale_y_log10() +
+  ylab ("Bandwidth (in KBps)") + xlab ("Storage Element")+ 
+  theme(axis.text.x = element_text(angle = 50, hjust = 1))
+```
+
+### Distribution of bandwidth values for uploads to SE 
+
+```{r echo=FALSE, fig.height=4.25, message=FALSE}
+ggplot(individual_bw[individual_bw$UpDown == "Downlink",], aes(x=Bandwidth)) + 
+  geom_histogram() + scale_x_log10()+ facet_wrap(~SE) +
+  xlab ("Bandwidth (in KBps)") + ylab ("Count")+ 
+  theme(axis.text.x = element_text(angle = 50, hjust = 1))
+```
+
+### Distribution of bandwidth values for downloads from SE
+
+```{r echo=FALSE, fig.height=4.25, message=FALSE}
+ggplot(individual_bw[individual_bw$UpDown == "Uplink",], aes(x=Bandwidth)) + 
+  geom_histogram() + scale_x_log10()+ facet_wrap(~SE) +
+  xlab ("Bandwidth (in KBps)") + ylab ("Count")+ 
+  theme(axis.text.x = element_text(angle = 50, hjust = 1))
+```
+
+\newpage
+
+### Bandwidths as computed during the log extraction
+
+```{r echo=FALSE, fig.height=9}
 ggplot(bandwidths, aes(x=SE, y=Bandwidth,  shape=Direction)) + 
   geom_point(size=2.5, color=hue_pal()(2)[2]) + scale_y_log10() + 
   facet_grid(Type~., scales="free") +
@@ -227,140 +309,7 @@ ggplot(bandwidths, aes(x=SE, y=Bandwidth,  shape=Direction)) +
   theme(axis.text.x = element_text(angle = 50, hjust = 1))
 ```
 
-### When removing a latency of fixed 990ms from transfer duration
-```{r echo=FALSE, cache=TRUE}
-avg_up_no_lat <- data.frame(aggregate(downloads$FileSize/((downloads$Time-0.99)*1000), 
-                                      list(downloads$Source),mean), "AVG", "UP")
-names(avg_up_no_lat) <- c("SE", "Bandwidth", "Type", "Direction")
-
-max_up_no_lat <- data.frame(aggregate(downloads$FileSize/((downloads$Time-0.99)*1000), 
-                                      list(downloads$Source),max), "MAX", "UP")
-names(max_up_no_lat) <- c("SE", "Bandwidth", "Type", "Direction")
-
-avg_down_no_lat <- data.frame(aggregate(uploads$FileSize/((uploads$Time-0.99)*1000), 
-                                        list(uploads$Destination),mean), "AVG", "DOWN")
-names(avg_down_no_lat) <- c("SE", "Bandwidth", "Type", "Direction")
-
-max_down_no_lat <- data.frame(aggregate(uploads$FileSize/((uploads$Time-0.99)*1000), 
-                                        list(uploads$Destination),max), "MAX", "DOWN")
-names(max_down_no_lat) <- c("SE", "Bandwidth", "Type", "Direction")
-
-bandwidths_no_lat <-rbind(avg_up_no_lat,max_up_no_lat,avg_down_no_lat,max_down_no_lat)
-bandwidths_no_lat$SE <- as.character(bandwidths_no_lat$SE)
-bandwidths_no_lat$SE <- factor(bandwidths_no_lat$SE, 
-                               levels=sort(unique(bandwidths_no_lat$SE)), ordered=TRUE)
-```
-
-```{r echo=FALSE, fig.height=4}
-ggplot(bandwidths_no_lat, aes(x=SE, y=Bandwidth, shape=Direction)) + 
-  geom_point(size=2.5, color=hue_pal()(2)[1]) + scale_y_log10() + 
-  facet_grid(Type~., scales="free") +
-  ylab ("Bandwidth (in KBps)") + xlab ("Storage Element") + 
-  scale_shape_manual(breaks=c("UP","DOWN"), labels=c("From", "To"), values=c(17,25))+
-  theme(axis.text.x = element_text(angle = 50, hjust = 1))
-```
-
-\newpage
-
-### Impact of excluding latency from bandwidth computation
-
-```{r echo=FALSE, cache=TRUE}
-bandwidths$Latency <- "Included"
-bandwidths_no_lat$Latency <- "Excluded"
-bandwidths_combined <- rbind(bandwidths, bandwidths_no_lat)
-bandwidths_combined$Label <- paste(bandwidths_combined$Direction," / ", bandwidths_combined$Latency)
-```
-```{r echo=FALSE, fig.height=8}
-ggplot(bandwidths_combined, aes(x=SE, y=Bandwidth, shape=Label, color=Label)) + 
-  geom_point(size=2.5) + 
-  scale_y_log10() + ylab ("Bandwidth (in KBps)") + xlab ("Storage Element")+
-  scale_shape_manual(breaks=sort(unique(bandwidths_combined$Label), decreasing = TRUE),
-                     labels=c("From / Included", "From / Excluded", 
-                              "To / Included", "To / Excluded"),
-                     values=c(25,25,17,17), name="")+
-  scale_color_manual(breaks=sort(unique(bandwidths_combined$Label), decreasing = TRUE),
-                     labels=c("From / Included", "From / Excluded", 
-                              "To / Included", "To / Excluded"),
-                     values=c(hue_pal()(2), hue_pal()(2)), name="")+
-  facet_grid(Type~., scales="free") +
-  theme(legend.position="top") +
-  theme(axis.text.x = element_text(angle = 50, hjust = 1))
-```
-
-\newpage
-
-## Gantt chart of the workflow execution 
-### According to data from VIP database
-
-```{r echo=FALSE, cache=TRUE}
-timings <- read.csv('csv_files/db_dump.csv', header = TRUE, sep = ' ') 
-# Simplify the job IDs
-timings$JobId <- timings$JobId-min(timings$JobId)
-
-queuing_step <- timings[names(timings) %in% c("JobId", "CreationTime", "DownloadStartTime")]
-names(queuing_step)<-c("JobId","Start","End")
-queuing_step$Step<-"Queuing"
-
-download_step <- timings[names(timings) %in% c("JobId", "DownloadStartTime")]
-names(download_step)<-c("JobId","Start")
-download_step$End <- timings$DownloadStartTime+timings$DownloadDuration
-download_step$Step <- "Download"
-
-computing_step <- timings[names(timings) %in% c("JobId", "ComputeStartTime")]
-names(computing_step)=c("JobId", "Start")
-computing_step$End <- timings$ComputeStartTime+timings$ComputeDuration
-computing_step$Step <-"Computing"
-
-upload_step<-timings[names(timings) %in% c("JobId", "UploadStartTime")]
-names(upload_step)<-c("JobId","Start")
-upload_step$End <- timings$UploadStartTime+timings$UploadDuration
-upload_step$Step <-"Upload"
-
-gantt <- rbind(queuing_step,download_step,computing_step, upload_step)
-
-```
-
-```{r echo=FALSE, fig.height=9}
-ggplot(gantt)+ geom_segment(aes(x=Start, xend=End, y=JobId, yend=JobId, color=Step), size=1.25) + 
-  geom_point(data=timings, aes(x=(DownloadStartTime+TotalDuration), y=JobId)) +
-  scale_color_discrete(breaks=c("Queuing", "Download", "Computing", "Upload"), name="") +
-  scale_y_reverse() + 
-  theme(legend.position="top") + xlab("Time (in seconds)") + ylab("Job Id")
-```
-
-### Isolation of the file transfer operations
-```{r echo=FALSE, fig.height=9}
-ggplot(gantt[gantt$Step %in% c("Download", "Upload"),])+ 
-  geom_segment(aes(x=Start, xend=End, y=JobId, yend=JobId, color=Step), size=1.25) + 
-  scale_color_discrete(breaks=c("Download", "Upload"), name="") +
-  scale_y_reverse() + 
-  theme(legend.position="top") + xlab("Time (in seconds)") + ylab("Job Id")
-```
-
 ### Number of concurrent transfers (by windows of 10s)
-```{r echo=FALSE, cache=TRUE}
-binwidth=10
-find_bins <- function(origin, s, e, end) {
-  c(rep(0,(s-origin)/binwidth), 
-    rep(1, (e-s)/binwidth), 
-    rep(0,(end-e)/binwidth))
-}
-
-df <-gantt[gantt$Step %in% c("Download", "Upload"),]
-origin <- floor(min(df$Start)/binwidth)*binwidth
-end<- ceiling(max(df$End)/binwidth)*binwidth
-bins = ddply(df,.(JobId,Step), 
-             function(x) find_bins(origin, 
-                                   floor(min(x$Start)/binwidth)*binwidth,
-                                   ceiling(max(x$End)/binwidth)*binwidth, end))
-bins=bins[,-1]
-names(bins) = c("Step", seq(origin, end-binwidth, by=binwidth))
-
-concurrency = melt(ddply(bins,.(Step), colwise(sum)), 
-                   id.vars="Step", value.name="Count", variable.name="Start")
-concurrency=concurrency[concurrency$Count>0,]
-concurrency$Start <- as.integer(as.character(concurrency$Start))
-```
 
 ```{r echo=FALSE, fig.height=9}
 ggplot(concurrency, aes(x=Start, y=factor(Count), fill=Count)) + 
@@ -370,52 +319,3 @@ ggplot(concurrency, aes(x=Start, y=factor(Count), fill=Count)) +
   xlab("Time (in seconds)") + ylab("Number of Concurrent Transfers")
 ```
 
-### Isolation of the file transfer operations
-```{r echo=FALSE, fig.height=9}
-ggplot(gantt[gantt$Step %in% c("Download", "Upload"),])+ 
-  geom_segment(aes(x=Start, xend=End, y=JobId, yend=JobId, color=Step), size=1.25) + 
-  scale_color_discrete(breaks=c("Download", "Upload"), name="") +
-  scale_y_reverse() + 
-  theme(legend.position="top") + xlab("Time (in seconds)") + ylab("Job Id")
-```
-
-### Number of concurrent transfers (by windows of 10s)
-```{r echo=FALSE, cache=TRUE}
-binwidth=10
-find_bins <- function(origin, s, e, end) {
-  c(rep(0,(s-origin)/binwidth), 
-    rep(1, (e-s)/binwidth), 
-    rep(0,(end-e)/binwidth))
-}
-
-df <-gantt[gantt$Step %in% c("Download", "Upload"),]
-origin <- floor(min(df$Start)/binwidth)*binwidth
-end<- ceiling(max(df$End)/binwidth)*binwidth
-bins = ddply(df,.(JobId,Step), 
-             function(x) find_bins(origin, 
-                                   floor(min(x$Start)/binwidth)*binwidth,
-                                   ceiling(max(x$End)/binwidth)*binwidth, end))
-bins=bins[,-1]
-names(bins) = c("Step", seq(origin, end-binwidth, by=binwidth))
-
-concurrency = melt(ddply(bins,.(Step), colwise(sum)), 
-                   id.vars="Step", value.name="Count", variable.name="Start")
-concurrency=concurrency[concurrency$Count>0,]
-concurrency$Start <- as.integer(as.character(concurrency$Start))
-```
-
-```{r echo=FALSE, fig.height=9}
-ggplot(concurrency, aes(x=Start, y=factor(Count), fill=Count)) + 
-  geom_bar(stat="identity") + 
-  scale_fill_continuous(low="green", high="red", name="") +
-  facet_grid(Step~., margins = TRUE) + guides(fill=FALSE) +
-  xlab("Time (in seconds)") + ylab("Number of Concurrent Transfers")
-```
-
-### Distribution of queuing time by grid site
-```{r echo=FALSE, fig.height=9}
-ggplot(timings, aes(x=Site, y=QueuingDuration))+ geom_boxplot() + 
-  theme(axis.text.x = element_text(angle = 50, hjust = 1)) + 
-  ylab("Queuing Time (in seconds)") + xlab("Grid Site") +
-  stat_summary(fun.y=mean, geom="line", aes(group=1, color="red")) + guides(color=FALSE)
-```
