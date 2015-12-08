@@ -99,29 +99,47 @@ done
 echo "SE,AVG_ALL,MAX_ALL,AVG_DOWN,MAX_DOWN,AVG_UP,MAX_UP" > se_bandwidth.csv
 
 sed "1d" $file_transfer | \
-  awk -F',' '{if ($5 > "0") { \
-       bw=$5/($6-990); \
-       if ($NF == "1" && $5 > 20) {\
-         if (! ($4 in se)) {se[$4]}; \
-         download_count[$4]+=1; \
-         total_bw[$4] += bw; \
-         if (bw > max_bandwidth[$4]){max_bandwidth[$4]=bw};\
-         total_download_bw[$4] += bw; \
-         if (bw > max_download_bandwidth[$4]){max_download_bandwidth[$4]=bw};\
-       } else {\
-         if ($NF == "2") {\
-           if (!($3 in se)){se[$3]}; \
-             upload_count[$3]+=1; \
-             total_bw[$3] += bw; \
-             if (bw > max_bandwidth[$3]){max_bandwidth[$3]=bw};\
-             total_upload_bw[$3] += bw; \
-             if (bw > max_upload_bandwidth[$3]){max_upload_bandwidth[$3]=bw};\
-         } else { \
-           if (! ($4 in se)) {se[$4]};
-             test_count[$4] = 1; \
-             test_bw[$4] = 100; \
-          }\
-       }\
+  awk -F',' '{
+    if ($5 > "0") {
+      bw=$5/($6-990);
+      if ($NF == "1" && $5 > 20) {
+        if (! ($4 in se)) 
+          {se[$4]};
+        if (bw > 100) {
+          download_count[$4]+=1;
+          total_bw[$4] += bw;
+          if (bw > max_bandwidth[$4])
+            {max_bandwidth[$4]=bw};
+          total_download_bw[$4] += bw;
+          if (bw > max_download_bandwidth[$4])
+            {max_download_bandwidth[$4]=bw};
+        } else {
+             test_count[$4] = 1; 
+             test_bw[$4] = 100;
+        }
+      } else {
+        if ($NF == "2") {
+          if (!($3 in se))
+            {se[$3]};
+          if (bw > 100) {
+            upload_count[$3]+=1;
+            total_bw[$3] += bw;
+            if (bw > max_bandwidth[$3])
+              {max_bandwidth[$3]=bw};
+            total_upload_bw[$3] += bw;
+            if (bw > max_upload_bandwidth[$3])
+              {max_upload_bandwidth[$3]=bw};
+           } else {
+             test_count[$3] = 1; 
+             test_bw[$3] = 100;
+           }
+        } else {
+           if (! ($4 in se)) 
+             {se[$4]};
+             test_count[$4] = 1; 
+             test_bw[$4] = 100;
+         }
+      }
     }} END { \
       for (id in se) {\
          if ((download_count[id]+upload_count[id]) > 0){\
