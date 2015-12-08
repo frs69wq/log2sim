@@ -113,7 +113,7 @@ fi
 if [ ! -f "$transfer_info" ]
 then
     info "File $transfer_info does not exist. Create it."
-    echo "Timestamp,JobId,Source,Destination,FileSize,Time,UpDown" > $transfer_info
+    echo "Timestamp,JobId,Source,Destination,FileSize,Time,JobType,SiteName,UpDown" > $transfer_info
 fi
 
 #information about each column in the file $transfer_info
@@ -125,21 +125,37 @@ fi
 #UpDown: type of transfer, i.e., UploadTest(0), Upload(1), Download(2), or Replication(3)
 
 # get information about upload(test) transfers 
-
 upload_duration=$(awk '/] UploadCommand=lcg-cr/' $input_log | \
     awk -F"Source=" '{gsub("="," ",$2); print $2}' | \
-    awk '{gsub(/:.*/,"",$1); gsub(/:.*/,"",$3); gsub("ms","",$7);printf '$timestamp'","'$job_id' ",'$machine_name',"$3","$5","$7","; if ($5==12) {print "0"} else {print "1"}}' | tee -a $transfer_info | awk -F',' '{if ($5 != 12){total_time+=$6};}END{print total_time/1000}')
+    awk '{gsub(/:.*/,"",$1); 
+          gsub(/:.*/,"",$3); 
+          gsub("ms","",$7);
+          printf '$timestamp'","'$job_id' ",'$machine_name',"$3","$5","$7",'$job_type','$site'"; 
+          if ($5==12) 
+            {print ",0"} 
+          else 
+            {print ",1"};}' | tee -a $transfer_info | \
+    awk -F',' '{if ($5 != 12){total_time+=$6};}END{print total_time/1000}')
 
 # get information about download transfers 
-download_duration=$(awk '/DownloadCommand=lcg-cp.*ms$/' $input_log | awk -F"Source=" '{print $2}'| \
-    awk -F"Destination=" '{count=split($1,a," "); gsub("="," ",$2);gsub("Size"," ",$2);gsub("Time"," ",$2); print a[count]" "$2}' | \
-    awk -F' ' '{ gsub("ms","",$4);print '$timestamp'","'$job_id' "," $1",'$machine_name',"$3","$4  ",2"}' |\
-tee -a $transfer_info | awk -F',' '{total_time+=$6;}END{print total_time/1000}')
+download_duration=$(awk '/DownloadCommand=lcg-cp.*ms$/' $input_log | \
+    awk -F"Source=" '{print $2}'| \
+    awk -F"Destination=" '{count=split($1,a," "); 
+                           gsub("="," ",$2);
+                           gsub("Size"," ",$2);
+                           gsub("Time"," ",$2); 
+                           print a[count]" "$2}' | \
+    awk -F' ' '{gsub("ms","",$4);
+                print '$timestamp'","'$job_id' "," $1",'$machine_name',"$3","$4",'$job_type','$site',2"}' |\
+    tee -a $transfer_info | awk -F',' '{total_time+=$6;}END{print total_time/1000}')
 
 # get information about replication transfers
-awk '/] UploadCommand=lcg-rep/' $input_log | awk -F"Source=" '{print $2}'| \
+awk '/] UploadCommand=lcg-rep/' $input_log | \
+    awk -F"Source=" '{print $2}'| \
     awk -F"Destination=" '{count=split($1,a," "); gsub("="," ",$2); print a[count]" "$2}' | \
-    awk '{gsub(/:.*/,"",$1); gsub(/:.*/,"",$3); print '$timestamp'","'$job_id' "," $1 ","$3","$5","$7",3"}' >> $transfer_info 
+    awk '{gsub(/:.*/,"",$1); 
+          gsub(/:.*/,"",$3); 
+          print '$timestamp'","'$job_id' "," $1 ","$3","$5","$7",'$job_type','$site',3"}' >> $transfer_info 
 
 ################################################################################
 ###             Extraction of information related to input files             ###

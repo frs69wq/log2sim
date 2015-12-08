@@ -208,8 +208,8 @@ summary(downloads[downloads$JobId != mergeId,]$Time)
 
 ### By Source for each file size
 ```{r echo=FALSE,fig.height=8}
-ggplot(downloads[downloads$JobId != mergeId,], aes(x=Source, y=Time, fill=factor(FileSize))) + 
-  geom_boxplot() + facet_grid(FileSize~., scales="free_y", drop=TRUE) +
+ggplot(downloads[downloads$JobType == "gate",], aes(x=Source, y=Time, fill=factor(FileSize))) + 
+  geom_boxplot() + facet_grid(FileSize~SiteName, scales="free", drop=TRUE) +
   xlab ("") + ylab ("Duration (in seconds)") + 
   theme(axis.text.x = element_text(angle = 50, hjust = 1)) + 
   guides(fill=FALSE)
