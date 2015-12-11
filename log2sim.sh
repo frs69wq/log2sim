@@ -120,11 +120,14 @@ info "Generating platform files ..."
 cmd="./platform_generator.sh ${workflow_dir} initial"
 info "\t$cmd"
 $cmd
+cmd="./platform_generator.R ${workflow_dir} initial"
+info "\t$cmd"
+$cmd
 cmd="./mock_platform_generator.sh ${workflow_dir} initial"
 info "\t$cmd"
 $cmd
 info "\tPlatform files: platform_${workflow_dir}_[avg/max]_[a/]symmetric.xml
- mock_platform_${workflow_dir}.xml ... created."
+ [AS/mock]_platform_${workflow_dir}.xml ... created."
 
 ##############################################################################
 #                                                                            #
