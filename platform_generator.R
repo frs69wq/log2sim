@@ -236,7 +236,7 @@ for (i in non_local_input_ses){
 }
 
 #### Declare links between ASes
-t$addTag("link", attrs=c(id="service_link", bandwidth="10Gbps", latency="500ms"))
+t$addTag("link", attrs=c(id="service_link", bandwidth="10Gbps", latency="500us"))
 
 for (i in 1:nrow(input_SE_to_site_bw)){
   t$addTag("link", attrs= c(id=paste(input_SE_to_site_bw[i,1], 
