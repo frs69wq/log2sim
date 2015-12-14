@@ -82,7 +82,8 @@ then
 fi
 
 #grid site
-site=$(awk -F'=' '/^SITE_NAME/ {print $NF}' $input_log)
+site=$(awk -F'=' '/^SITE_NAME/ {print $NF}' $input_log| \
+    tr '[:lower:]' '[:upper:]')
 
 #close SE of Worker Node
 dpm_host=$(awk -F'=' '/^DPM_HOST/ {print $NF}' $input_log)

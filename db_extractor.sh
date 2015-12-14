@@ -53,23 +53,28 @@ java -cp ${db_driver} org.h2.tools.Shell \
 
 sed '1d' $output | while read line
 do
-    fields=$(echo $line | awk '{print $1,$2,$3,$5,$6,$7,$NF}')
+    fields=$(echo $line | awk '{print $1,$2,$3,$4,$5,$6,$7,$NF}')
     set -- $fields
     # $1 = job id
     # $2 = command
     # $3 = worker name
-    # $4 (in fields) = $5 (in line) = creation time
-    # $5 (in fields) = $6 (in line) = queuing time
-    # $6 (in fields) = $7 (in line) = download start time
-    # $7 (in fields) = $NF (in line) = log file name
-
+    # $4 = grid site
+    # $5 = creation time
+    # $6 = queuing time
+    # $7 = download start time
+    # $8 (in fields) = $NF (in line) = log file name
+    
+    site=$(echo $4 | tr '[:lower:]' '[:upper:]')
+    sed "s/$4/$site/g" -i $output
+    
     if [[ $3 == null ]] 
     then	
 	input_log=$log_dir/$workflow_dir/out/$7.sh.out
 	info "\tBad entry for job $1. Look to " \
 	    "${input_log} to correct it".
 	machine_name=$(awk -F'=' '/^HOSTNAME/ {print $NF}' $input_log)
-	site=$(awk -F'=' '/^SITE_NAME/ {print $NF}' $input_log)
+	site=$(awk -F'=' '/^SITE_NAME/ {print $NF}' $input_log |\
+               tr '[:lower:]' '[:upper:]')
 	
 	if [[ $machine_name == "" ]]
 	then
@@ -87,9 +92,9 @@ do
 		awk '{print $(NF-1)}')
 	    compute_start=$(($6 + $download_duration))
 	    upload_start=$(($compute_start + $compute_time))
-	    new_line=$(echo -e $1 $2 $machine_name $site $4 $5 $6 \
+	    new_line=$(echo -e $1 $2 $machine_name $site $5 $6 $7 \
 		$download_duration $compute_start $compute_time $upload_start \
-		$upload_duration $total_time $7)
+		$upload_duration $total_time $8)
 	    sed "s/$line/$new_line/g" -i $output
 	fi
     fi
