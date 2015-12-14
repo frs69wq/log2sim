@@ -63,9 +63,20 @@ non_local_input_downloads <- transfers[!transfers$Source %in% local_ses &
 
 non_local_input_ses <- unique(as.character(non_local_input_downloads$Source))
 
+# Compute the respective average bandwidth from these SE to each grid site
+# Let ddply produce NaN entries. The rationale is that during the simulation
+# the LFC can pick a SE for download input that was not selected during the real
+# execution. To circumvent this, we add a default bandwidth for the missing 
+# connections. This value is set to the maximum observed bandwidth.
+
 input_SE_to_site_bw = ddply(non_local_input_downloads,
                             c("Source","SiteName"),summarize, 
-                            AvgBandwidth=round(mean(Bandwidth),2))
+                            AvgBandwidth=round(mean(Bandwidth),2), .drop=FALSE)
+input_SE_to_site_bw = input_SE_to_site_bw[! input_SE_to_site_bw$Source %in%
+                                            c(workers$Name,local_ses) ,]
+
+input_SE_to_site_bw[is.nan(input_SE_to_site_bw$AvgBandwidth),]$AvgBandwidth <- 
+  max(transfers$Bandwidth)
 
 # Identify all the local SEs from which the merge job has to download
 # partial results
