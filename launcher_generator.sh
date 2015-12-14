@@ -91,7 +91,7 @@ do
     done
     for platform_type in "AS" "mock"
     do 
-	echo "echo -e '\\tSimulate on mock'" >>$output
+	echo "echo -e '\\tSimulate on $platform_type'" >>$output
 	echo  'java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar VIPSimulator \
         simgrid_files/'${platform_type}'_platform_'${workflow_dir}'.xml simgrid_files/'${deployment_file}' \
         '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}'\
