@@ -65,7 +65,8 @@ echo -e '# Command lines arguments are:\n' \
         '# Events per second: '$events_per_sec'\n' \
         '# version: 1 or 2\n' >> $output 
 
-echo -e ' verbose=${1:-""}\n'\
+echo -e 'platform_type=${1:-"all"}\n'>> $output
+echo -e 'verbose=${2:-""}\n'\
         'if [[ $verbose == "-v" ]]\n'\
         'then\n'\
         '\tverbose="'"--log=root.fmt:[%12.6r]%e(%3i:%10P@%40h)%e%m%n"'"\n'\
@@ -73,34 +74,55 @@ echo -e ' verbose=${1:-""}\n'\
         '\tverbose="'"--log=jmsg.thres:critical"'"\n'\
         'fi\n' >> $output
 
+echo -e 'version=2\n' >> $output
+
 # Order of argument: Platform Deployment TotalParticleNumber NmuberOfGateJob SOSTime NumberOfMergeJob cpuMergeTime eventsPerSec LogFile
-for version in 2
-do
-    echo "echo  Use version '$version' of the simulator" >>$output
-    for platform_type in "max_symmetric" "max_asymmetric" "avg_symmetric" "avg_asymmetric"
-    do  
-	echo "echo -e '\\tSimulate on $platform_type'" >>$output
-	echo  'java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar VIPSimulator \
-        simgrid_files/platform_'${workflow_dir}'_'${platform_type}'.xml simgrid_files/'${deployment_file}' \
-        '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}'\
-        '${version}' 10000000 ${verbose}' \
-        '1> timings/simulated_time_on_'${platform_type}'_v'${version}'.csv' \
-        '2>csv_files/simulated_file_transfer_on_'${platform_type}'_v'${version}'.csv'  >> $output 
 
-	echo -e "\n" >> $output
-    done
-    for platform_type in "AS" "mock"
-    do 
-	echo "echo -e '\\tSimulate on $platform_type'" >>$output
-	echo  'java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar VIPSimulator \
-        simgrid_files/'${platform_type}'_platform_'${workflow_dir}'.xml simgrid_files/'${deployment_file}' \
-        '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}'\
-        '${version}' 10000000 ${verbose}' \
-        '1> timings/simulated_time_on_'${platform_type}'_v'${version}'.csv' \
-        '2>csv_files/simulated_file_transfer_on_'${platform_type}'_v'${version}'.csv'  >> $output 
-	echo -e "\n" >> $output
-    done
-done
+echo 'cmd="java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar \
+ VIPSimulator simgrid_files/"'>> $output
+echo 'params="simgrid_files/'${deployment_file}' \
+ '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000"' >> $output
 
+echo -e "\n" >> $output
+
+echo 'case $platform_type in 
+   "max_symmetric"|"max_asymmetric"|"avg_symmetric"|"avg_asymmetric" )
+        platform_file="platform_'${workflow_dir}'_${platform_type}.xml"
+        echo -e "\\tSimulate on ${platform_type}"
+        run=$cmd" "${platform_file}" "${params}
+        echo -e "\\t\\t$run"
+        $run 1> timings/simulated_time_on_${platform_type}_v${version}.csv \
+        2>csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv 
+        ;;
+   "AS"|"mock" )
+        platform_file="${platform_type}_'${workflow_dir}'.xml"
+        echo -e "\\tSimulate on ${platform_type}"
+        run=$cmd" "${platform_file}" "${params}
+        echo -e "\\t\\t$run"
+        $run 1> timings/simulated_time_on_${platform_type}_v${version}.csv \
+        2>csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
+        ;;
+   "all" )
+           for platform_type in "max_symmetric" "max_asymmetric" "avg_symmetric" "avg_asymmetric"
+        do
+           platform_file="platform_'${workflow_dir}'_${platform_type}.xml"
+           echo -e "\\tSimulate on ${platform_type}"
+           run=$cmd" "${platform_file}" "${params}
+           echo -e "\\t\\t$run"
+           $run  1> timings/simulated_time_on_${platform_type}_v${version}.csv \
+           2>csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
+        done
+        for platform_type in "AS" "mock"
+        do
+           platform_file="${platform_type}_'${workflow_dir}'.xml"
+           echo -e "\\tSimulate on ${platform_type}"
+           run=$cmd" "${platform_file}" "${params}
+           echo -e "\\t\\t$run"
+           $run  1> timings/simulated_time_on_${platform_type}_v${version}.csv \
+           2>csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
+        done
+        ;;
+esac' >> $output
+	
 #give execution right to the generated file in .sh
 chmod +x $output
