@@ -42,6 +42,8 @@ transfers=transfers[transfers$FileSize >12,]
 # remove 990msec from the transfer time (dispatched as network/control latency)
 transfers$Bandwidth <- transfers$FileSize/(transfers$Time-990)
 
+transfers=transfers[transfers$Bandwidth>100,]
+
 # Store the list of identified grid sites and local SEs
 sites <- unique(workers$SiteName)
 local_ses <- unique(workers$CloseSE)
@@ -185,7 +187,8 @@ for (i in sites){
   
     # Declare the network interconnection of this local SE
     to_se=transfers[transfers$Destination == w[j,8],]
-    from_se=transfers[transfers$Source == w[j,8],]
+    from_se=transfers[transfers$Source == w[j,8] & 
+                        transfers$SiteName == w[j,6],]
     
     if (nrow(to_se)>0 & nrow(from_se)>0){
       # This SE has been used for both upload(s) and download(s)
@@ -193,12 +196,12 @@ for (i in sites){
       # Discard the unrealistically low measures (< 100kB/s) while computing
       t$addTag("link", attrs=c(id=paste(w[j,8],"link_UP",sep="_"),
                                bandwidth=paste(round(mean(
-                                 from_se[from_se$Bandwidth>100,10],2)),
+                                 from_se$Bandwidth,2)),
                                                "kBps", sep=""),
                                latency="500us"))
       t$addTag("link", attrs=c(id=paste(w[j,8],"link_DOWN",sep="_"),
                                bandwidth=paste(round(mean(
-                                 to_se[to_se$Bandwidth>100,10]),2),
+                                 to_se$Bandwidth),2),
                                                "kBps", sep=""),
                                latency="500us"))
     } else {
@@ -307,8 +310,8 @@ for (i in 1:nrow(localSE_to_merge)){
       t$addTag("ASroute", attrs=c(src=as.character(info$AS), 
                                   dst=paste("AS",localSE_to_merge[i,2], 
                                             sep="_"),
-                                  gw_src=info$NameSE, 
-                                  gw_dst=paste("AS",ext_downloads_merge[i,2],
+                                  gw_src=as.character(info$NameSE), 
+                                  gw_dst=paste("AS",localSE_to_merge[i,2],
                                                "router", sep="_")), 
       close=FALSE)
     }
