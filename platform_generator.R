@@ -33,7 +33,7 @@ workers <- read.csv(paste(wd,'worker_nodes.csv', sep="/"), header=TRUE,
 
 # Get information about file transfers 
 transfers <- read.csv(paste(wd,'file_transfer.csv', sep="/"), header = TRUE, 
-                      sep=',')
+                      sep=',',as.is=TRUE)
 
 # Remove the upload-tests and the small downloads of 11 bytes made by merge
 transfers=transfers[transfers$FileSize >12,]
@@ -44,64 +44,53 @@ transfers$Bandwidth <- transfers$FileSize/(transfers$Time-990)
 
 transfers=transfers[transfers$Bandwidth>100,]
 
-# Store the list of identified grid sites and local SEs
+# Store the list of identified grid sites and SEs
 sites <- unique(workers$SiteName)
-local_ses <- unique(workers$CloseSE)
+storage_elements <- unique(c(transfers[transfers$UpDown == 1,]$Destination,
+                                 transfers[transfers$UpDown == 2,]$Source))
 
-# Check for anormalities in transfers:
+# Also identify those that are declared as closeSE and check for inconsistencies 
+# in the transfers data frame:
 #   * some SEs are used for upload without being declared as local
 # If true, this indicates a problem in the logs, hence the generation has
 # to be stopped
+local_ses <- unique(workers$CloseSE)
 if (length(unique(transfers[!transfers$Destination %in% local_ses &
                               transfers$UpDown==1,]$Destination))>0){
   stop("Some SEs are used for upload without being declared as local.")
 }
 
-# Identify Sources of input files that are not located in one the already
-# declared grid site. This means that these SE are used for input downloads
-# only.
-non_local_input_downloads <- transfers[!transfers$Source %in% local_ses &
-                                         transfers$UpDown == 2,]
-
-non_local_input_ses <- unique(as.character(non_local_input_downloads$Source))
-
-# Compute the respective average bandwidth from these SE to each grid site
-# Let ddply produce NaN entries. The rationale is that during the simulation
-# the LFC can pick a SE for download input that was not selected during the real
-# execution. To circumvent this, we add a default bandwidth for the missing 
+# Compute the respective average bandwidth from (then to) these SE to (then from)
+# each grid site. Let ddply produce NaN entries. The rationale is that during the
+# simulation the LFC can pick a SE for download input that was not selected during
+# the real execution. To circumvent this, we add a default bandwidth for the missing 
 # connections. This value is set to the maximum observed bandwidth.
 
-input_SE_to_site_bw = ddply(non_local_input_downloads,
-                            c("Source","SiteName"),summarize, 
-                            AvgBandwidth=round(mean(Bandwidth),2), .drop=FALSE)
-input_SE_to_site_bw = input_SE_to_site_bw[! input_SE_to_site_bw$Source %in%
-                                            c(workers$Name,local_ses) ,]
+SE_to_site_bandwidth = ddply(transfers[transfers$UpDown==2,], 
+                             c("Source","SiteName"), summarize, 
+                             AvgBandwidth=round(mean(Bandwidth),2), 
+                             .drop=FALSE)
 
-input_SE_to_site_bw[is.nan(input_SE_to_site_bw$AvgBandwidth),]$AvgBandwidth <- 
-  max(transfers$Bandwidth)
+SE_to_site_bandwidth[is.nan(SE_to_site_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
+  max(transfers[transfers$UpDown==2,]$Bandwidth)
 
-# Identify all the local SEs from which the merge job has to download
-# partial results
-# First discard the first two downloads (release + inputs)
-downloads_merge <-tail(transfers[transfers$JobType=="merge" & 
-                                   transfers$UpDown==2,], -2)
-# Then identify the host running the merge job 
-worker_merge <- unique(downloads_merge$Destination)
-# and its associate SE
-se_merge = workers[workers$Name==worker_merge,8]
+for (i in 1:nrow(SE_to_site_bandwidth)){
+  SE_to_site_bandwidth[i,3] <- max(SE_to_site_bandwidth[i,3],
+                                   mean(transfers[transfers$UpDown == 2 & 
+                                                    transfers$Source == 
+                                                    SE_to_site_bandwidth[i,1],10]))
+}
 
-# For all SEs but 'se_merge', compute the average bandwidth to the merge site
-ext_downloads_merge = downloads_merge[downloads_merge$Source != se_merge,]
-localSE_to_merge = ddply(ext_downloads_merge,c("Source","SiteName"),summarize, 
-                         AvgBandwidth=round(mean(Bandwidth),2))
+site_to_SE_bandwidth = ddply(transfers[transfers$UpDown==1,], 
+                             c("Destination","SiteName"),summarize, 
+                             AvgBandwidth=round(mean(Bandwidth),2),
+                             .drop=FALSE)
 
-# Define a dataframe to know, for each AS
-#    * the name of its storage element
-#    * its routing method
-AS_se <- data.frame(AS=character(0),NameSE=character(0), Routing=character(0))
+site_to_SE_bandwidth[is.nan(site_to_SE_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
+  max(transfers[transfers$UpDown==1,]$Bandwidth)
+
 
 #### Generation of the XML tree
-
 # Creation and header
 t = xmlTree("platform", attrs=c(version="3"), 
             dtd='platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid.dtd"')
@@ -116,7 +105,7 @@ t$addTag("AS", attrs=c(id=workflow_name, routing="Full"), close=FALSE)
 t$addTag("AS", attrs=c(id="Services", routing="Cluster"), close=FALSE)
 t$addTag("router", attrs=c(id="Services_router"))
 t$addTag("backbone",attrs=c(id="Services_backbone", bandwidth="100GBps", 
-                            latency="1500us"))
+                            latency="750us"))
 
 t$addTag("host", attrs=c(id="vip.creatis.insa-lyon.fr", power="5Gf",core="4"))
 t$addTag("link", attrs=c(id="vip.creatis.insa-lyon.fr_link", bandwidth="10Gbps", 
@@ -131,15 +120,6 @@ t$addTag("link", attrs=c(id="lfc-biomed.in2p3.fr_link", bandwidth="10Gbps",
 t$addTag("host_link", attrs=c(id="lfc-biomed.in2p3.fr", 
                               up="lfc-biomed.in2p3.fr_link_UP",
                               down="lfc-biomed.in2p3.fr_link_DOWN"))
-
-# t$addTag("host", attrs=c(id="ccsrm02.in2p3.fr", power="5Gf"))
-# t$addTag("link", attrs=c(id="ccsrm02.in2p3.fr_link",
-#                          bandwidth="10368.1kBps",
-#                          latency="500us",
-#                          sharing_policy="FULLDUPLEX"))
-# t$addTag("host_link", id="ccsrm02.in2p3.fr", up="ccsrm02.in2p3.fr_link_UP", 
-#          down="ccsrm02.in2p3.fr_link_DOWN"))
-  
 t$closeTag()
 
 
@@ -148,14 +128,12 @@ for (i in sites){
   #     * a router
   #     * a backbone
   #     * all the used worker nodes that belong to this site
-  #     * the local SE declared by the worker nodes (this SE has to be unique)
-  # The routing method for this AS is 'Cluster'
 
   t$addTag("AS", attrs=c(id=paste("AS",i, sep="_"), routing="Cluster"), 
            close=FALSE)
   t$addTag("router", attrs=c(id=paste("AS",i,"router", sep="_")))
   t$addTag("backbone",attrs=c(id=paste(i,"backbone", sep="_"), 
-                              bandwidth="100GBps", latency="1500us"))
+                              bandwidth="100GBps", latency="750us"))
   
   w = workers[workers$SiteName == i,]
   for (j in 1:nrow(w)){
@@ -171,68 +149,13 @@ for (i in sites){
     t$addTag("host_link", attrs=c(id=w[j,2],
                                   up=paste(w[j,2],"link_UP",sep="_"), 
                                   down=paste(w[j,2],"link_DOWN",sep="_")))  
-  }
-  
-  # Check if more than one SE has been declared as local by worker nodes
-  if (length(unique(as.factor(w$closeSE)))>1){
-    # If yes, stop the generation, this situation is not handled yet 
-    stop("Worker nodes of a same site declare different local SEs")
-  } else{
-    # Registe local SE and routing method for this site
-    new_row = data.frame(i,w[j,8],"Cluster")
-    AS_se = rbind(AS_se, new_row)
-    
-    # Declare the node hosting the SE service
-    t$addTag("host", attrs=c(id=w[j,8], power="5Gf"))
-  
-    # Declare the network interconnection of this local SE
-    to_se=transfers[transfers$Destination == w[j,8],]
-    from_se=transfers[transfers$Source == w[j,8] & 
-                        transfers$SiteName == w[j,6],]
-    
-    if (nrow(to_se)>0 & nrow(from_se)>0){
-      # This SE has been used for both upload(s) and download(s)
-      # Then, declare two links with distinct bandwidth values
-      # Discard the unrealistically low measures (< 100kB/s) while computing
-      t$addTag("link", attrs=c(id=paste(w[j,8],"link_UP",sep="_"),
-                               bandwidth=paste(round(mean(
-                                 from_se$Bandwidth,2)),
-                                               "kBps", sep=""),
-                               latency="500us"))
-      t$addTag("link", attrs=c(id=paste(w[j,8],"link_DOWN",sep="_"),
-                               bandwidth=paste(round(mean(
-                                 to_se$Bandwidth),2),
-                                               "kBps", sep=""),
-                               latency="500us"))
-    } else {
-      # This SE has been either for upload(s) or download(s)
-      # Then, declare a single full-duplex link
-      # Discard the unrealistically low measures (< 100kB/s) while computing
-      t$addTag("link", attrs=c(id=paste(w[j,8],"link",sep="_"),
-                               bandwidth=paste(round(mean(
-                                 transfers[transfers$Bandwidth>100,10]),2),
-                                               "kBps", sep=""),
-                               latency="500us", sharing_policy="FULLDUPLEX"))
-    }
-    t$addTag("host_link", attrs=c(id=w[j,8], up=paste(w[j,8],"link_UP",sep="_"),
-                                  down=paste(w[j,8],"link_DOWN",sep="_")))
-  }
+  }  
   t$closeTag()
 }
 
-names(AS_se) <-c("AS","NameSE", "Routing")
-
-for (i in non_local_input_ses){
-  # Definition of an AS for each identified location of input file that does not
-  # belong to a grid site. Such AS only comprises the SE itself.
-  # The routing method for this AS is 'None'
-  
-  # Registe AS name and routing method for this SE
-  new_row = data.frame(paste("AS",i,sep="_"),i,"None")
-  names(new_row)=c("AS", "NameSE", "Routing")
-  AS_se = rbind(AS_se, new_row, deparse.level = 0)
-  
-  # Create the AS and declare the node hosting the SE service 
+for (i in storage_elements){
+  # Definition of an AS for each SE. Such AS only comprises the node hosting the
+  # SE service. The routing method for this AS is 'None'
   t$addTag("AS", attrs=c(id=paste("AS",i,sep="_"), routing="None"), close=FALSE)
   t$addTag("host", attrs=c(id=i, power="5Gf"))
   t$closeTag()
@@ -241,26 +164,24 @@ for (i in non_local_input_ses){
 #### Declare links between ASes
 t$addTag("link", attrs=c(id="service_link", bandwidth="10Gbps", latency="500us"))
 
-for (i in 1:nrow(input_SE_to_site_bw)){
-  t$addTag("link", attrs= c(id=paste(input_SE_to_site_bw[i,1], 
-                                     input_SE_to_site_bw[i,2], sep="-"),
-                            bandwidth=paste(input_SE_to_site_bw[i,3],"kBps", 
+for (i in 1:nrow(SE_to_site_bandwidth)){
+  t$addTag("link", attrs= c(id=paste(SE_to_site_bandwidth[i,1], 
+                                     SE_to_site_bandwidth[i,2], sep="-"),
+                            bandwidth=paste(SE_to_site_bandwidth[i,3],"kBps", 
                                             sep=""),
                             latency="500us"))
 } 
 
-for (i in 1:nrow(localSE_to_merge)){
-  info <- AS_se[as.character(AS_se$NameSE) == localSE_to_merge[i,1],]
-  
-  t$addTag("link", attrs= c(id=paste(info$AS, 
-                                     localSE_to_merge[i,2], sep="-"),
-                            bandwidth=paste(localSE_to_merge[i,3],"kBps", 
+for (i in 1:nrow(site_to_SE_bandwidth)){
+  t$addTag("link", attrs= c(id=paste(site_to_SE_bandwidth[i,2], 
+                                     site_to_SE_bandwidth[i,1], sep="-"),
+                            bandwidth=paste(site_to_SE_bandwidth[i,3],"kBps", 
                                             sep=""),
                             latency="500us"))
-}
+} 
 
 #### Declare the routing between ASes
-# from the 'Services' AS to all the other ASes (grid sites and input locations)
+# from the 'Services' AS to all the other ASes (grid sites and storage elements)
 for (i in sites){
   t$addTag("ASroute", attrs=c(src="Services", dst=paste("AS", i, sep="_"),
                                gw_src="Services_router", 
@@ -270,7 +191,7 @@ for (i in sites){
   t$closeTag()  
 }
 
-for (i in non_local_input_ses){
+for (i in storage_elements){
   t$addTag("ASroute", attrs=c(src="Services", dst=paste("AS", i, sep="_"),
                                gw_src="Services_router", gw_dst=i), 
            close=FALSE)
@@ -278,46 +199,49 @@ for (i in non_local_input_ses){
   t$closeTag()  
 }
 
-# From input locations to grid sites
-for (i in 1:nrow(input_SE_to_site_bw)){
-  t$addTag("ASroute", attrs=c(src=paste("AS", input_SE_to_site_bw[i,1], 
+for (i in 1:nrow(SE_to_site_bandwidth)){
+# if (SE_to_site_bandwidth[i,1] %in% site_to_SE_bandwidth$Destination){
+  if (SE_to_site_bandwidth[i,2] %in% 
+        site_to_SE_bandwidth[site_to_SE_bandwidth$Destination == 
+                               SE_to_site_bandwidth[i,1],2]){
+    sym = "NO"
+  } else {
+    sym="YES"
+  }
+  t$addTag("ASroute", attrs=c(src=paste("AS",SE_to_site_bandwidth[i,1], 
                                         sep="_"), 
-                               dst=paste("AS", input_SE_to_site_bw[i,2], 
-                                         sep="_"),
-                               gw_src=as.character(input_SE_to_site_bw[i,1]), 
-                               gw_dst=paste("AS",input_SE_to_site_bw[i,2],
-                                            "router", sep="_")), 
+                              dst=paste("AS", SE_to_site_bandwidth[i,2], 
+                                        sep="_"),
+                              gw_src=SE_to_site_bandwidth[i,1], 
+                              gw_dst=paste("AS",SE_to_site_bandwidth[i,2],
+                                           "router", sep="_"),
+                              symmetrical=sym), 
            close=FALSE)
-  t$addTag("link_ctn", attrs=c(id=paste(input_SE_to_site_bw[i,1], 
-                                        input_SE_to_site_bw[i,2], sep="-")))
-  t$closeTag()   
+  t$addTag("link_ctn", attrs=c(id=paste(SE_to_site_bandwidth[i,1], 
+                                        SE_to_site_bandwidth[i,2], sep="-")))
+  t$closeTag()    
 }
 
-# From local SEs to merge location
-for (i in 1:nrow(localSE_to_merge)){
-    info <- AS_se[as.character(AS_se$NameSE) == localSE_to_merge[i,1],]
-
-    if (info$Routing == "Cluster"){
-      t$addTag("ASroute", attrs=c(src=paste("AS",info$AS, sep="_"),
-                                   dst=paste("AS",localSE_to_merge[i,2], 
-                                             sep="_"),
-                                   gw_src=paste("AS",info$AS,"router", 
-                                                sep="_"), 
-                                   gw_dst=paste("AS",localSE_to_merge[i,2],
-                                                "router", sep="_")), 
-             close=FALSE)
-    } else {
-      t$addTag("ASroute", attrs=c(src=as.character(info$AS), 
-                                  dst=paste("AS",localSE_to_merge[i,2], 
-                                            sep="_"),
-                                  gw_src=as.character(info$NameSE), 
-                                  gw_dst=paste("AS",localSE_to_merge[i,2],
-                                               "router", sep="_")), 
-      close=FALSE)
-    }
-    t$addTag("link_ctn", attrs=c(id=paste(info$AS, localSE_to_merge[i,2], 
-                                          sep="-")))
-    t$closeTag()   
+for (i in 1:nrow(site_to_SE_bandwidth)){
+  if (site_to_SE_bandwidth[i,2] %in% 
+        SE_to_site_bandwidth[SE_to_site_bandwidth$Source == 
+                               site_to_SE_bandwidth[i,1],2]){
+    sym = "NO"
+  } else {
+    sym="YES"
+  }
+  t$addTag("ASroute", attrs=c(src=paste("AS", site_to_SE_bandwidth[i,2], 
+                                        sep="_"),
+                              dst=paste("AS",site_to_SE_bandwidth[i,1], 
+                                        sep="_"),
+                              gw_src=paste("AS",site_to_SE_bandwidth[i,2],
+                                           "router", sep="_"),
+                              gw_dst=site_to_SE_bandwidth[i,1], 
+                              symmetrical=sym), 
+           close=FALSE)
+  t$addTag("link_ctn", attrs=c(id=paste(site_to_SE_bandwidth[i,2], 
+                                        site_to_SE_bandwidth[i,1], sep="-")))
+  t$closeTag()    
 }
 
 # Close the initial <AS> tag
