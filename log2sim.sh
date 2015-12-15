@@ -155,6 +155,7 @@ Directory organization:
 To partially regenerate some files do:
 \t../../scripts/deployment_generator.sh ${workflow_dir}
 \t../../scripts/platform_generator.sh ${workflow_dir}
+\t../../scripts/platform_generator.R ${workflow_dir}
 \t../../scripts/mock_generator.sh ${workflow_dir}\n" > \
 README
 
