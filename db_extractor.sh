@@ -66,8 +66,9 @@ do
     
     site=$(echo $4 | tr '[:lower:]' '[:upper:]')
     sed "s/$4/$site/g" -i $output
-    
-    if [[ $3 == NULL ]] || [[ $3 == null ]] 
+    sed 's/NULL/null/g' -i $output
+
+    if [[ $3 == null ]] 
     then	
 	input_log=$log_dir/$workflow_dir/out/$8.sh.out
 	info "\tBad entry for job $1. Look to " \
