@@ -100,7 +100,7 @@ if (length(upload_test_se) > 0) {
 local_ses <- unique(workers$CloseSE)
 if (length(unique(transfers[!transfers$Destination %in% local_ses &
                               transfers$UpDown==1,]$Destination))>0){
-  stop("Some SEs are used for upload without being declared as local.")
+  warning("WARNING: Some SEs are used for upload without being declared as local.")
 }
 
 # Compute the respective average bandwidth from (then to) these SE to (then from)
