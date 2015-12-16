@@ -79,7 +79,7 @@ echo -e 'version=2\n' >> $output
 # Order of argument: Platform Deployment TotalParticleNumber NmuberOfGateJob SOSTime NumberOfMergeJob cpuMergeTime eventsPerSec LogFile
 
 echo 'cmd="java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar \
- VIPSimulator simgrid_files/"'>> $output
+ VIPSimulator"'>> $output
 echo 'params="simgrid_files/'${deployment_file}' \
  '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000"' >> $output
 
@@ -87,7 +87,7 @@ echo -e "\n" >> $output
 
 echo 'case $platform_type in 
    "max_symmetric"|"max_asymmetric"|"avg_symmetric"|"avg_asymmetric" )
-        platform_file="platform_'${workflow_dir}'_${platform_type}.xml"
+        platform_file="simgrid_files/platform_'${workflow_dir}'_${platform_type}.xml"
         echo -e "\\tSimulate on ${platform_type}"
         run=$cmd" "${platform_file}" "${params}
         echo -e "\\t\\t$run"
@@ -95,7 +95,7 @@ echo 'case $platform_type in
         2>csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv 
         ;;
    "AS"|"mock" )
-        platform_file="${platform_type}_'${workflow_dir}'.xml"
+        platform_file="simgrid_files/${platform_type}_platform_'${workflow_dir}'.xml"
         echo -e "\\tSimulate on ${platform_type}"
         run=$cmd" "${platform_file}" "${params}
         echo -e "\\t\\t$run"
@@ -105,7 +105,7 @@ echo 'case $platform_type in
    "all" )
            for platform_type in "max_symmetric" "max_asymmetric" "avg_symmetric" "avg_asymmetric"
         do
-           platform_file="platform_'${workflow_dir}'_${platform_type}.xml"
+           platform_file="simgrid_files/platform_'${workflow_dir}'_${platform_type}.xml"
            echo -e "\\tSimulate on ${platform_type}"
            run=$cmd" "${platform_file}" "${params}
            echo -e "\\t\\t$run"
@@ -114,7 +114,7 @@ echo 'case $platform_type in
         done
         for platform_type in "AS" "mock"
         do
-           platform_file="${platform_type}_'${workflow_dir}'.xml"
+           platform_file="simgrid_files/${platform_type}_platform_'${workflow_dir}'.xml"
            echo -e "\\tSimulate on ${platform_type}"
            run=$cmd" "${platform_file}" "${params}
            echo -e "\\t\\t$run"
