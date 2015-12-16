@@ -39,15 +39,37 @@ transfers <- read.csv(paste(wd,'file_transfer.csv', sep="/"), header = TRUE,
 transfers=transfers[transfers$FileSize >12,]
 
 # Compute the observed bandwidth for each individual file transfer
-# remove 990msec from the transfer time (dispatched as network/control latency)
-transfers$Bandwidth <- transfers$FileSize/(transfers$Time-990)
+# remove 1 sec from the transfer time (dispatched as network/control latency)
+transfers$Bandwidth <- transfers$FileSize/(pmax(1,(transfers$Time-1000)))
 
+# Discriminate transfers according to computed bandwidth. The problem is that 
+# for small files, values are extremely small, hence unrealistic. 
+slow_transfers=transfers[transfers$Bandwidth<100,]
 transfers=transfers[transfers$Bandwidth>100,]
+
 
 # Store the list of identified grid sites and SEs
 sites <- unique(workers$SiteName)
 storage_elements <- unique(c(transfers[transfers$UpDown == 1,]$Destination,
                                  transfers[transfers$UpDown == 2,]$Source))
+
+# Identify if there exists some SE for which bandwidth is always low. If there
+# is, they have to be described though in the platform file (with a minimum 
+# default bandwidth of 100kBps)
+slow_se <- unique(c(slow_transfers[slow_transfers$UpDown == 1,]$Destination,
+                    slow_transfers[slow_transfers$UpDown == 2,]$Source))
+slow_se <- slow_se[! slow_se %in% storage_elements]
+
+slow_transfers = slow_transfers[(slow_transfers$UpDown == 1 & 
+                                   slow_transfers$Destination %in% slow_se) | 
+                                  (slow_transfers$UpDown == 2 & 
+                                     slow_transfers$Source %in% slow_se),]
+slow_transfers$Bandwidth <- 100
+
+# Include back the slow SE(s) and their modified transfers into the data frames
+# used for generation
+storage_elements <- c(storage_elements,slow_se)
+transfers = rbind(transfers,slow_transfers)
 
 # Also identify those that are declared as closeSE and check for inconsistencies 
 # in the transfers data frame:
