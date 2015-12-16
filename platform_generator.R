@@ -60,31 +60,37 @@ slow_se <- unique(c(slow_transfers[slow_transfers$UpDown == 1,]$Destination,
                     slow_transfers[slow_transfers$UpDown == 2,]$Source))
 slow_se <- slow_se[! slow_se %in% storage_elements]
 
-slow_transfers = slow_transfers[(slow_transfers$UpDown == 1 & 
-                                   slow_transfers$Destination %in% slow_se) | 
-                                  (slow_transfers$UpDown == 2 & 
-                                     slow_transfers$Source %in% slow_se),]
-slow_transfers$Bandwidth <- 100
+if (length(slow_se) > 0) {
+  slow_transfers = slow_transfers[(slow_transfers$UpDown == 1 & 
+                                     slow_transfers$Destination %in% slow_se) | 
+                                    (slow_transfers$UpDown == 2 & 
+                                       slow_transfers$Source %in% slow_se),]
+  slow_transfers$Bandwidth <- 100
 
 
-# Include back the slow SE(s) and their modified transfers into the data frames
-# used for generation
-storage_elements <- c(storage_elements,slow_se)
-transfers = rbind(transfers,slow_transfers)
+  # Include back the slow SE(s) and their modified transfers into the data frames 
+  # used for generation
+  storage_elements <- c(storage_elements,slow_se)
+  transfers = rbind(transfers,slow_transfers)
+}
 
 # Also Identify if there exists some SE used only for upload-tests. If there
 # is, they have to be described though in the platform file (with a minimum 
 # default bandwidth of 100kBps). 
 upload_test_se <- unique(raw_transfers[raw_transfers$UpDown == 0,]$Destination)
 upload_test_se <- upload_test_se[!upload_test_se %in% storage_elements]
-upload_test_only = raw_transfers[(raw_transfers$UpDown == 0 & 
-                                    raw_transfers$Destination %in% upload_test_se),]
-upload_test_only$Bandwidth <- 100
 
-# Include back the upload-test only SE(s) and their modified transfers into 
-# the data frames used for generation
-storage_elements <- c(storage_elements,upload_test_se)
-transfers = rbind(transfers,upload_test_only)
+if (length(upload_test_se) > 0) {
+  upload_test_only = raw_transfers[(raw_transfers$UpDown == 0 & 
+                                      raw_transfers$Destination %in% 
+                                      upload_test_se),]
+  upload_test_only$Bandwidth <- 100
+
+  # Include back the upload-test only SE(s) and their modified transfers into 
+  # the data frames used for generation
+  storage_elements <- c(storage_elements,upload_test_se)
+  transfers = rbind(transfers,upload_test_only)
+}
 
 # Finally identify those that are declared as closeSE and check for inconsistencies 
 # in the transfers data frame:
