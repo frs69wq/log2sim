@@ -32,11 +32,11 @@ workers <- read.csv(paste(wd,'worker_nodes.csv', sep="/"), header=TRUE,
                     sep=',', as.is=TRUE)
 
 # Get information about file transfers 
-transfers <- read.csv(paste(wd,'file_transfer.csv', sep="/"), header = TRUE, 
+raw_transfers <- read.csv(paste(wd,'file_transfer.csv', sep="/"), header = TRUE, 
                       sep=',',as.is=TRUE)
 
 # Remove the upload-tests and the small downloads of 11 bytes made by merge
-transfers=transfers[transfers$FileSize >12,]
+transfers=raw_transfers[raw_transfers$FileSize >12,]
 
 # Compute the observed bandwidth for each individual file transfer
 # remove 1 sec from the transfer time (dispatched as network/control latency)
@@ -66,12 +66,27 @@ slow_transfers = slow_transfers[(slow_transfers$UpDown == 1 &
                                      slow_transfers$Source %in% slow_se),]
 slow_transfers$Bandwidth <- 100
 
+
 # Include back the slow SE(s) and their modified transfers into the data frames
 # used for generation
 storage_elements <- c(storage_elements,slow_se)
 transfers = rbind(transfers,slow_transfers)
 
-# Also identify those that are declared as closeSE and check for inconsistencies 
+# Also Identify if there exists some SE used only for upload-tests. If there
+# is, they have to be described though in the platform file (with a minimum 
+# default bandwidth of 100kBps). 
+upload_test_se <- unique(raw_transfers[raw_transfers$UpDown == 0,]$Destination)
+upload_test_se <- upload_test_se[!upload_test_se %in% storage_elements]
+upload_test_only = raw_transfers[(raw_transfers$UpDown == 0 & 
+                                    raw_transfers$Destination %in% upload_test_se),]
+upload_test_only$Bandwidth <- 100
+
+# Include back the upload-test only SE(s) and their modified transfers into 
+# the data frames used for generation
+storage_elements <- c(storage_elements,upload_test_se)
+transfers = rbind(transfers,upload_test_only)
+
+# Finally identify those that are declared as closeSE and check for inconsistencies 
 # in the transfers data frame:
 #   * some SEs are used for upload without being declared as local
 # If true, this indicates a problem in the logs, hence the generation has
@@ -103,13 +118,13 @@ for (i in 1:nrow(SE_to_site_bandwidth)){
                                                     SE_to_site_bandwidth[i,1],10]))
 }
 
-site_to_SE_bandwidth = ddply(transfers[transfers$UpDown==1,], 
+site_to_SE_bandwidth = ddply(transfers[transfers$UpDown != 2,], 
                              c("Destination","SiteName"),summarize, 
                              AvgBandwidth=round(mean(Bandwidth),2),
                              .drop=FALSE)
 
 site_to_SE_bandwidth[is.nan(site_to_SE_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
-  max(transfers[transfers$UpDown==1,]$Bandwidth)
+  max(transfers[transfers$UpDown != 2,]$Bandwidth)
 
 
 #### Generation of the XML tree
