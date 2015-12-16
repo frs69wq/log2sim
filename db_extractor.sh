@@ -67,9 +67,9 @@ do
     site=$(echo $4 | tr '[:lower:]' '[:upper:]')
     sed "s/$4/$site/g" -i $output
     
-    if [[ $3 == null ]] 
+    if [[ $3 == NULL ]] || [[ $3 == null ]] 
     then	
-	input_log=$log_dir/$workflow_dir/out/$7.sh.out
+	input_log=$log_dir/$workflow_dir/out/$8.sh.out
 	info "\tBad entry for job $1. Look to " \
 	    "${input_log} to correct it".
 	machine_name=$(awk -F'=' '/^HOSTNAME/ {print $NF}' $input_log)
