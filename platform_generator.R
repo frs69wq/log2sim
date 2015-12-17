@@ -113,9 +113,10 @@ SE_to_site_bandwidth = ddply(transfers[transfers$UpDown==2,],
                              c("Source","SiteName"), summarize, 
                              AvgBandwidth=round(mean(Bandwidth),2), 
                              .drop=FALSE)
-
-SE_to_site_bandwidth[is.nan(SE_to_site_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
-  max(transfers[transfers$UpDown==2,]$Bandwidth)
+if (TRUE %in% is.nan(SE_to_site_bandwidth$AvgBandwidth)) {
+  SE_to_site_bandwidth[is.nan(SE_to_site_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
+    max(transfers[transfers$UpDown==2,]$Bandwidth)
+}
 
 for (i in 1:nrow(SE_to_site_bandwidth)){
   SE_to_site_bandwidth[i,3] <- max(SE_to_site_bandwidth[i,3],
@@ -128,10 +129,10 @@ site_to_SE_bandwidth = ddply(transfers[transfers$UpDown != 2,],
                              c("Destination","SiteName"),summarize, 
                              AvgBandwidth=round(mean(Bandwidth),2),
                              .drop=FALSE)
-
-site_to_SE_bandwidth[is.nan(site_to_SE_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
-  max(transfers[transfers$UpDown != 2,]$Bandwidth)
-
+if (TRUE %in% is.nan(site_to_SE_bandwidth$AvgBandwidth)) {
+  site_to_SE_bandwidth[is.nan(site_to_SE_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
+    max(transfers[transfers$UpDown != 2,]$Bandwidth)
+}
 
 #### Generation of the XML tree
 # Creation and header
