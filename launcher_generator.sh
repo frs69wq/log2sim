@@ -81,7 +81,7 @@ echo -e 'version=2\n' >> $output
 echo 'cmd="java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar \
  VIPSimulator"'>> $output
 echo 'params="simgrid_files/'${deployment_file}' \
- '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000"' >> $output
+ '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose}"' >> $output
 
 echo -e "\n" >> $output
 
@@ -92,7 +92,7 @@ echo 'case $platform_type in
         run=$cmd" "${platform_file}" "${params}
         echo -e "\\t\\t$run"
         $run 1> timings/simulated_time_on_${platform_type}_v${version}.csv \
-        2>csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv 
+        2> csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv 
         ;;
    "AS"|"mock" )
         platform_file="simgrid_files/${platform_type}_platform_'${workflow_dir}'.xml"
@@ -100,7 +100,7 @@ echo 'case $platform_type in
         run=$cmd" "${platform_file}" "${params}
         echo -e "\\t\\t$run"
         $run 1> timings/simulated_time_on_${platform_type}_v${version}.csv \
-        2>csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
+        2> csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
         ;;
    "all" )
            for platform_type in "max_symmetric" "max_asymmetric" "avg_symmetric" "avg_asymmetric"
@@ -110,7 +110,7 @@ echo 'case $platform_type in
            run=$cmd" "${platform_file}" "${params}
            echo -e "\\t\\t$run"
            $run  1> timings/simulated_time_on_${platform_type}_v${version}.csv \
-           2>csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
+           2> csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
         done
         for platform_type in "AS" "mock"
         do
@@ -119,7 +119,7 @@ echo 'case $platform_type in
            run=$cmd" "${platform_file}" "${params}
            echo -e "\\t\\t$run"
            $run  1> timings/simulated_time_on_${platform_type}_v${version}.csv \
-           2>csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
+           2> csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
         done
         ;;
 esac' >> $output
