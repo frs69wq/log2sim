@@ -12,17 +12,18 @@
 workflow=${1:? "Name of workflow folder is mandatory!!"}
 initial=${2:-"standalone"}
 
-LFC_catalog="LfcCatalog_$workflow.csv"
 
 if [ $initial == "initial" ]
 then 
     file_transfer="file_transfer.csv"
     db_dump="db_dump.csv"
+    LFC_catalog="LfcCatalog_$workflow.csv"
     config="configParser.txt"
     output_dir="."
 else
     file_transfer="csv_files/file_transfer.csv"
     db_dump="csv_files/db_dump.csv"
+    LFC_catalog="simgrid_files/LfcCatalog_$workflow.csv"
     config="../../scripts/configParser.txt"
     output_dir="simgrid_files"
     echo -e [`date +"%D %T"`] "Deployment file regeneration" >> README
@@ -49,14 +50,28 @@ header="<?xml version='1.0'?>"\
 echo -e $header > $output_file
 
 ######################## add SEs to deployment file ############################
+inputSEs=$(cat $LFC_catalog | awk -F',' '{gsub(":","\n",$NF);print $NF}' | \
+    sort |uniq | grep -v $defSE | awk  '{printf $1} END {printf "\n"}')
+
 
 sed "1d" $file_transfer | grep -v $defSE | \
-    awk -F ',' '{printf "\t<process host=\"";
-                 if ($NF=="2") printf $3; else {printf $4};
-                 print "\" function=\"SE\"/>"}' | sort | uniq >> $output_file
-
-echo -e '\n\t<process host="'$defSE'" function="DefaultSE"/>' >> $output_file
-
+    awk -F ',' -v i=$inputSEs -v cat=$LFC_catalog '{printf "\t<process host=\"";
+    if ($NF=="2") printf $3; else {printf $4}; printf "\" function=\"SE\"";
+    if (($NF=="2" && match(i,$3)) || (match(i, $4))){
+       printf ">";
+       printf "<argument value=\"simgrid_files/"cat"\"/>"
+       print "</process>";
+    } else 
+       print "/>"}' |sort |uniq >> $output_file
+if grep -q $defSE $LFC_catalog 
+then
+    echo -e "\n\t<process host=\"'$defSE'\" function=\"DefaultSE\">\n" \
+    "\t\t<argument value=\"simgrid_files/$LFC_catalog\"/>\n" \
+    "\t</process>\n">> $output_file
+else 
+    echo -e '\n\t<process host="'$defSE'" function="DefaultSE"/>' \
+	>> $output_file
+fi 
 ################################################################################
 
 echo -e "\t<process host=\"lfc-biomed.in2p3.fr\" function=\"DefaultLFC\">\n"\
