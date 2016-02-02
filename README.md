@@ -14,9 +14,10 @@ Requirements:
   + Available at http://gforge.inria.fr/frs/download.php/file/35216/simgrid.jar
 
 Environment variables setting:
-
-  + export LOG2SIM_LOGS=/path/to/original/logs (e.g., /home/user/log_dir)
-  + export VIPSIM=/path/to/VIP/Java/Simulator  (e.g., /home/user/VIPSimulator)
-  + export H2DRIVER=/path/to/h2-1.3.176.jar    (e.g., /home/user/h2-1.3.176.jar)
-  + export SIMGRID_PATH=/path/to/simgrid.jar   (e.g., /usr/local/java)
+  + To parse original VIP/GATE execution logs
+     + export LOG2SIM_LOGS=/path/to/original/logs (e.g., /home/user/log_dir)
+     + export H2DRIVER=/path/to/h2-1.3.176.jar    (e.g., /home/user/h2-1.3.176.jar)
+  + To replay the execution in simulation
+     + export VIPSIM=/path/to/VIP/Java/Simulator  (e.g., /home/user/VIPSimulator)
+     + export SIMGRID_PATH=/path/to/simgrid.jar   (e.g., /usr/local/java)
   

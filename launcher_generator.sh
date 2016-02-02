@@ -9,18 +9,26 @@
 
 workflow_dir=${1:? name of workflow must passed as argument!}
 cheat=${2:-"no"}
+initial=${3:-"standalone"}
 
 output="simulate_$workflow_dir.sh"
-
 deployment_file="deployment_$workflow_dir.xml"
 
-total_particle_number=$(awk '/] Initial number of particles:/''{print $NF}' \
-    ${LOG2SIM_LOGS}/${workflow_dir}/workflow.out)
+if [ $initial == "initial" ]
+then 
+    db_dump="db_dump.csv"
+else
+    db_dump="csv_files/db_dump.csv"
+    echo -e [`date +"%D %T"`] "Launcher file regeneration" >> README
+fi
 
-number_of_gate_jobs=$(grep gate db_dump.csv |wc -l)
+number_of_gate_jobs=$(grep gate $db_dump |wc -l)
 # awk '/] processor "gate" executed/''{print}' \
 #     ${LOG2SIM_LOGS}/${workflow_dir}/workflow.out | awk 'END{print}' | \
 #     awk '{print $(NF-1)}')
+
+total_particle_number=$(awk '/] Initial number of particles:/''{print $NF}' \
+    ${LOG2SIM_LOGS}/${workflow_dir}/workflow.out)
 
 if [ $cheat != "no" ]
 then 

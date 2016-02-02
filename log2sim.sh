@@ -133,7 +133,7 @@ info "\tPlatform files: platform_${workflow_dir}_[avg/max]_[a/]symmetric.xml
 ##############################################################################
 
 info "Generating simulation launcher ..."
-cmd="./launcher_generator.sh $workflow_dir cheat"
+cmd="./launcher_generator.sh $workflow_dir cheat initial"
 info "\t$cmd"
 $cmd
 info "\tLauncher: simulate_$workflow_dir.sh ... created."
@@ -153,6 +153,7 @@ To partially regenerate some files do:
 \t../../scripts/deployment_generator.sh ${workflow_dir}
 \t../../scripts/platform_generator.sh ${workflow_dir}
 \t../../scripts/platform_generator.R ${workflow_dir}
+\t../../scripts/launcher_generator.sh ${workflow_dir}
 \t../../scripts/mock_generator.sh ${workflow_dir}\n" > \
 README
 
