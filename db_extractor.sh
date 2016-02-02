@@ -12,15 +12,10 @@ function info {
   echo -e [`date +"%D %T"`] $*
 }
 
-#Get the path of logs folder that contain all workflow folders.
-log_dir=$(awk -F'=' '/log_folder/ {print $2}' configParser.txt)
-
 # Get the name of the directory that contains all the log files
-# related to a workflow. This directory is located $log_dir.
+# related to a workflow. This directory is located $LOG2SIM_LOGS.
 workflow_dir=${1:? Workflow directory name is mandatory!}
 
-# Get database driver from config file
-db_driver=$(awk -F'=' '/db_driver/ {print $2}' configParser.txt)
 output="db_dump.csv"
 
 if [ ! -f "$output" ]
@@ -45,8 +40,8 @@ DATEDIFF('SECOND',DOWNLOAD,END_E) as TOTAL_TIME, FILE_NAME
 from JOBS WHERE STATUS='COMPLETED' ORDER BY ID"
 
 
-java -cp ${db_driver} org.h2.tools.Shell \
-     -url "jdbc:h2:${log_dir}/${workflow_dir}/db/db/jobs" \
+java -cp ${H2DRIVER} org.h2.tools.Shell \
+     -url "jdbc:h2:${LOG2SIM_LOGS}/${workflow_dir}/db/db/jobs" \
      -user gasw -password gasw -sql "$sql_query" | \
      sed -e '1d' -e '$d' -e 's/ *| */ /g' >> $output \
 || info "SQL query failed."
@@ -70,7 +65,7 @@ do
 
     if [[ $3 == null ]] 
     then	
-	input_log=$log_dir/$workflow_dir/out/$8.sh.out
+	input_log=$LOG2SIM_LOGS/$workflow_dir/out/$8.sh.out
 	info "\tBad entry for job $1. Look to " \
 	    "${input_log} to correct it".
 	machine_name=$(awk -F'=' '/^HOSTNAME/ {print $NF}' $input_log)

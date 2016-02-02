@@ -7,10 +7,6 @@
 # under the terms of the license (GNU LGPL) which comes with this code.      #
 ##############################################################################
 
-#Get the path of logs folder that contain all workflow folders.
-log_dir=$(awk -F'=' '/log_folder/ {print $2}' configParser.txt)
-sim_dir=$(awk -F'=' '/sim_folder/ {print $2}' configParser.txt)
-
 workflow_dir=${1:? name of workflow must passed as argument!}
 cheat=${2:-"no"}
 
@@ -19,11 +15,11 @@ output="simulate_$workflow_dir.sh"
 deployment_file="deployment_$workflow_dir.xml"
 
 total_particle_number=$(awk '/] Initial number of particles:/''{print $NF}' \
-    ${log_dir}/${workflow_dir}/workflow.out)
+    ${LOG2SIM_LOGS}/${workflow_dir}/workflow.out)
 
 number_of_gate_jobs=$(grep gate db_dump.csv |wc -l)
 # awk '/] processor "gate" executed/''{print}' \
-#     ${log_dir}/${workflow_dir}/workflow.out | awk 'END{print}' | \
+#     ${LOG2SIM_LOGS}/${workflow_dir}/workflow.out | awk 'END{print}' | \
 #     awk '{print $(NF-1)}')
 
 if [ $cheat != "no" ]
@@ -34,7 +30,8 @@ fi
 sos_time=300
 
 number_of_merge_jobs=$(awk '/] processor "merge" executed/''{print}' \
-    ${log_dir}/${workflow_dir}/workflow.out | awk 'END{print}' | awk '{print $(NF-1)}')
+    ${LOG2SIM_LOGS}/${workflow_dir}/workflow.out | awk 'END{print}' | \
+    awk '{print $(NF-1)}')
 
 if [ $cheat != "no" ]
 then
@@ -46,9 +43,6 @@ else
   # event_per_sec=$(awk '/Average of Computational cost/ {print $NF}' $application_file)
 fi
   
-
-
-
 # Writing informations to the output file.
 
 echo '#! /bin/bash -u' > $output
@@ -78,7 +72,7 @@ echo -e 'version=2\n' >> $output
 
 # Order of argument: Platform Deployment TotalParticleNumber NmuberOfGateJob SOSTime NumberOfMergeJob cpuMergeTime eventsPerSec LogFile
 
-echo 'cmd="java -cp '${sim_dir}'/bin:/usr/local/java/simgrid.jar \
+echo 'cmd="java -cp ${VIPSIM}/bin:${SIMGRID_PATH}/simgrid.jar \
  VIPSimulator"'>> $output
 echo 'params="simgrid_files/'${deployment_file}' \
  '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose}"' >> $output

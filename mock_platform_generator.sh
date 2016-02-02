@@ -13,12 +13,10 @@ if [ $initial == "initial" ]
 then 
     file_transfer="file_transfer.csv"
     worker_nodes="worker_nodes.csv"
-    config="configParser.txt"
     output_dir="."
 else
     file_transfer="csv_files/file_transfer.csv"
     worker_nodes="csv_files/worker_nodes.csv"
-    config="../../scripts/configParser.txt"
     output_dir="simgrid_files"
     echo -e [`date +"%D %T"`] "Mock platform regeneration" >> README
 fi

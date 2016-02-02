@@ -12,20 +12,17 @@ function info {
   echo -e [`date +"%D %T"`] $*
 }
 
-#Get the path of logs folder that contain all workflow folders.
-log_dir=$(awk -F'=' '/log_folder/ {print $2}' configParser.txt)
-
 # Get the name of the directory that contains all the log files
-# related to a workflow. This directory is located $log_dir.
+# related to a workflow. This directory is located $LOG2SIM_LOGS.
 workflow_dir=${1:? Workflow directory name is mandatory!}
 
 info "Name of Workflow folder: $workflow_dir"
-info "Check if directory exists in $log_dir ..."
-if [ -d "$log_dir/$workflow_dir" ]
+info "Check if directory exists in $LOG2SIM_LOGS ..."
+if [ -d "$LOG2SIM_LOGS/$workflow_dir" ]
 then
-    info "\t$log_dir/$workflow_dir directory is found!"
+    info "\t$LOG2SIM_LOGS/$workflow_dir directory is found!"
 else
-    info "\t$log_dir/$workflow_dir directory is not accessible!"
+    info "\t$LOG2SIM_LOGS/$workflow_dir directory is not accessible!"
     exit
 fi    
 
@@ -63,9 +60,9 @@ info "\t DB dump: $db_dump ... created."
 
 # get number of files in the log directory in order to retrieve information.
 info "Starting extraction from
-$(ls -l ${log_dir}/${workflow_dir}/out/*.sh.out | wc -l) log files"
+$(ls -l ${LOG2SIM_LOGS}/${workflow_dir}/out/*.sh.out | wc -l) log files"
 
-for log_file in  `ls ${log_dir}/${workflow_dir}/out/*.sh.out`; do
+for log_file in  `ls ${LOG2SIM_LOGS}/${workflow_dir}/out/*.sh.out`; do
     info "\tParsing  $log_file ..."
     ./log_extractor.sh $log_file ${LFC_catalog}
 done
