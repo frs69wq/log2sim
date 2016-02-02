@@ -49,14 +49,14 @@ sed "1d" $file_transfer | grep -v $defSE | \
     if ($NF=="2") printf $3; else {printf $4}; printf "\" function=\"SE\"";
     if (($NF=="2" && match(i,$3)) || (match(i, $4))){
        printf ">";
-       printf "<argument value=\"simgrid_files/"cat"\"/>"
+       printf "<argument value=\""cat"\"/>"
        print "</process>";
     } else 
        print "/>"}' |sort |uniq >> $output_file
 if grep -q $defSE $output_dir/$LFC_catalog 
 then
     echo -e '\n\t<process host="'$defSE'" function="DefaultSE">\n' \
-    '\t\t<argument value="simgrid_files/'$output_dir/$LFC_catalog'"/>\n' \
+    '\t\t<argument value="'$output_dir/$LFC_catalog'"/>\n' \
     '\t</process>\n'>> $output_file
 else 
     echo -e '\n\t<process host="'$defSE'" function="DefaultSE"/>' \
@@ -65,7 +65,7 @@ fi
 ################################################################################
 
 echo -e "\t<process host=\"lfc-biomed.in2p3.fr\" function=\"DefaultLFC\">\n"\
-"\t\t<argument value=\"simgrid_files/$LFC_catalog\"/>\n"\
+"\t\t<argument value=\"$output_dir/$LFC_catalog\"/>\n"\
 "\t</process>\n" >> $output_file 
 
 ################################################################################
