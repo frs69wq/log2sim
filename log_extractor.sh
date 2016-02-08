@@ -175,7 +175,7 @@ fi
 
 array_file_info=($(awk '/] lcg-cp -v --connect-timeout/{nr[NR]; nr[NR+2]}; NR in nr' $input_log | \
     awk -F'/' '{print $NF}' | awk 'NR%2{printf $0" ";next;}1' | \
-    awk -F'=' '{split($3,a," ", seps); sub($3,a[1]" Destination",$0); print}' | \
+    awk -F'=' '{n=split($3,a," ", seps); sub($3,a[n-1]" Destination",$0); print}' | \
     awk -F'/' '{gsub("="," ",$0); gsub(/\[.*.\]/,"",$0);print}' | \
     awk '{printf $1","$9; if ($2 == "DownloadCommand") print ","$5; else print ",'$close_SE'"}'))
 
