@@ -1,4 +1,11 @@
 #!/usr/bin/Rscript
+##############################################################################
+# Copyright (c) Centre de Calcul de l'IN2P3 du CNRS, CREATIS                 #
+# Contributor(s) : Frédéric SUTER (2015-2016)                                #
+#                                                                            #
+# This program is free software; you can redistribute it and/or modify it    #
+# under the terms of the license (GNU LGPL) which comes with this code.      #
+##############################################################################
 
 #### Required R packages
 library(XML)
