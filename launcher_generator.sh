@@ -13,6 +13,7 @@ initial=${3:-"standalone"}
 
 output="simulate_$workflow_dir.sh"
 deployment_file="deployment_$workflow_dir.xml"
+deployment_file2="deployment_${workflow_dir}_2.xml"
 
 if [ $initial == "initial" ]
 then 
@@ -105,7 +106,7 @@ echo 'case $platform_type in
         2> csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
         ;;
    "all" )
-           for platform_type in "max_symmetric" "max_asymmetric" "avg_symmetric" "avg_asymmetric"
+        for platform_type in "max_symmetric" "max_asymmetric" "avg_symmetric" "avg_asymmetric"
         do
            platform_file="simgrid_files/platform_'${workflow_dir}'_${platform_type}.xml"
            echo -e "\\tSimulate on ${platform_type}"
@@ -125,6 +126,17 @@ echo 'case $platform_type in
         done
         ;;
 esac' >> $output
-	
+
+echo -e 'version=3\n' >> $output
+echo 'if [ $platform_type == "AS" ]
+then 
+echo -e "\\tSimulate on AS  - version ${version}" 
+platform_file="simgrid_files/AS_platform_'${workflow_dir}'.xml"
+run=$cmd" ${platform_file} simgrid_files/'${deployment_file2}' '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose}"
+echo -e "\\t\\t$run"
+$run  1> timings/simulated_time_on_AS_v${version}.csv \
+      2> csv_files/simulated_file_transfer_on_AS_v${version}.csv
+fi' >> $output
+
 #give execution right to the generated file in .sh
 chmod +x $output
