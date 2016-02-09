@@ -35,13 +35,13 @@ header="<?xml version='1.0'?>\n<!DOCTYPE platform SYSTEM
 as_tag="<AS id=\"AS_"${workflow_dir}"\" routing=\""$routing"\">\n"
 
 # VIP Server
-server="\t<host id=\""$master"\" power=\"5Gf\" core=\"4\"/>\n
+server="\t<host id=\""$master"\" power=\"5Gf\" core=\"48\"/>\n
 \t<link id=\""$master"_link\" bandwidth=\"1Gbps\" latency=\"100us\" sharing_policy=\"FULLDUPLEX\"/>\n
 \t<host_link id=\""$master"\" up=\""$master"_link_UP\" 
 down=\""$master"_link_DOWN\"/>\n\n"
 
 # Default LFC
-default_lfc="\t<host id=\""$lfc"\" power=\"5Gf\" core=\"4\"/>\n
+default_lfc="\t<host id=\""$lfc"\" power=\"5Gf\" core=\"48\"/>\n
 \t<link id=\""$lfc"_link\" bandwidth=\"1Gbps\" latency=\"100us\" sharing_policy=\"FULLDUPLEX\"/>\n
 \t<host_link id=\""$lfc"\" up=\""$lfc"_link_UP\" down=\""$lfc"_link_DOWN\"/>\n" 
 
@@ -50,7 +50,7 @@ default_lfc="\t<host id=\""$lfc"\" power=\"5Gf\" core=\"4\"/>\n
 
 if ! grep -q $defSE $file_transfer
 then
-    default_se="\t<host id=\"ccsrm02.in2p3.fr\" power=\"5Gf\" core=\"4\"/>\n
+    default_se="\t<host id=\"ccsrm02.in2p3.fr\" power=\"5Gf\" core=\"48\"/>\n
 \t<link id=\"ccsrm02.in2p3.fr_link\" bandwidth=\"1Gbps\" latency=\"100us\" sharing_policy=\"FULLDUPLEX\"/>\n
 \t<host_link id=\"ccsrm02.in2p3.fr\" up=\"ccsrm02.in2p3.fr_link_UP\"
  down=\"ccsrm02.in2p3.fr_link_DOWN\"/>\n"
@@ -86,7 +86,7 @@ sed "1d" $file_transfer | \
        bw=$5/($6-990); \
        if (($NF == "1" && $5 > "20") || ($NF=="0")) {\
          if (! ($4 in se)) {se[$4];\
-           print "\t<host id=\"" $4 "\" power=\"5Gf\"/>\n" \
+           print "\t<host id=\"" $4 "\" power=\"5Gf\" core=\"48\"/>\n" \
                  "\t<link id=\"" $4 "_link\" bandwidth=\"1Gbps\"\
  latency=\"500us\" sharing_policy=\"FULLDUPLEX\"/>\n" \
                  "\t<host_link id=\"" $4 "\" up=\"" $4 "_link_UP\"\
@@ -95,7 +95,7 @@ sed "1d" $file_transfer | \
        } else {\
          if ($NF == "2") {\
          if (!($3 in se)){se[$3];\
-           print "\t<host id=\"" $3 "\" power=\"5Gf\"/>\n" \
+           print "\t<host id=\"" $3 "\" power=\"5Gf\"/ core=\"48\">\n" \
                  "\t<link id=\"" $3 "_link\" bandwidth=\"1Gbps\"\
  latency=\"500us\" sharing_policy=\"FULLDUPLEX\"/>\n" \
                  "\t<host_link id=\"" $3 "\" up=\"" $3 "_link_UP\"\

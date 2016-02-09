@@ -38,13 +38,13 @@ header="<?xml version='1.0'?>\n<!DOCTYPE platform SYSTEM
 as_tag="<AS id=\"AS_"${workflow_dir}"\" routing=\""$routing"\">\n"
 
 # VIP Server
-server="\t<host id=\""$master"\" power=\"5Gf\" core=\"4\"/>\n
+server="\t<host id=\""$master"\" power=\"5Gf\" core=\"48\"/>\n
 \t<link id=\""$master"_link\" bandwidth=\"10Gbps\" latency=\"500us\" sharing_policy=\"FULLDUPLEX\"/>\n
 \t<host_link id=\""$master"\" up=\""$master"_link_UP\" 
 down=\""$master"_link_DOWN\"/>\n\n"
 
 # Default LFC
-default_lfc="\t<host id=\""$lfc"\" power=\"5Gf\" core=\"4\"/>\n
+default_lfc="\t<host id=\""$lfc"\" power=\"5Gf\" core=\"48\"/>\n
 \t<link id=\""$lfc"_link\" bandwidth=\"10Gbps\" latency=\"500us\" sharing_policy=\"FULLDUPLEX\"/>\n
 \t<host_link id=\""$lfc"\" up=\""$lfc"_link_UP\" down=\""$lfc"_link_DOWN\"/>\n" 
 
@@ -53,7 +53,7 @@ default_lfc="\t<host id=\""$lfc"\" power=\"5Gf\" core=\"4\"/>\n
 
 if ! grep -q $defSE $file_transfer
 then
-    default_se="\t<host id=\"ccsrm02.in2p3.fr\" power=\"5Gf\" core=\"4\"/>\n
+    default_se="\t<host id=\"ccsrm02.in2p3.fr\" power=\"5Gf\" core=\"48\"/>\n
 \t<link id=\"ccsrm02.in2p3.fr_link\" bandwidth=\"10Gbps\" latency=\"500us\" sharing_policy=\"FULLDUPLEX\"/>\n
 \t<host_link id=\"ccsrm02.in2p3.fr\" up=\"ccsrm02.in2p3.fr_link_UP\"
  down=\"ccsrm02.in2p3.fr_link_DOWN\"/>\n"
@@ -166,7 +166,7 @@ sed "1d" se_bandwidth.csv | while read line
 do
    se=$(echo $line | 
        awk -F',' '{print \
-       "\\t<host id=\"" $1 "\" power=\"5Gf\"/>\\n";}')
+       "\\t<host id=\"" $1 "\" power=\"5Gf\" core=\"48\"/>\\n";}')
    for output_xml in $max_sym $max_asym $avg_asym $avg_sym
    do   
        case $output_xml in

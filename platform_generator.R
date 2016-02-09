@@ -158,14 +158,14 @@ t$addTag("router", attrs=c(id="Services_router"))
 t$addTag("backbone",attrs=c(id="Services_backbone", bandwidth="100GBps", 
                             latency="750us"))
 
-t$addTag("host", attrs=c(id="vip.creatis.insa-lyon.fr", power="5Gf",core="4"))
+t$addTag("host", attrs=c(id="vip.creatis.insa-lyon.fr", power="5Gf",core="48"))
 t$addTag("link", attrs=c(id="vip.creatis.insa-lyon.fr_link", bandwidth="10Gbps", 
                          latency="500us", sharing_policy="FULLDUPLEX"))
 t$addTag("host_link", attrs=c(id="vip.creatis.insa-lyon.fr", 
                               up="vip.creatis.insa-lyon.fr_link_UP",
                               down="vip.creatis.insa-lyon.fr_link_DOWN"))
   
-t$addTag("host", attrs=c(id="lfc-biomed.in2p3.fr", power="5Gf", core="4"))
+t$addTag("host", attrs=c(id="lfc-biomed.in2p3.fr", power="5Gf", core="48"))
 t$addTag("link", attrs=c(id="lfc-biomed.in2p3.fr_link", bandwidth="10Gbps", 
                          latency="500us", sharing_policy="FULLDUPLEX"))
 t$addTag("host_link", attrs=c(id="lfc-biomed.in2p3.fr", 
@@ -208,7 +208,7 @@ for (i in storage_elements){
   # Definition of an AS for each SE. Such AS only comprises the node hosting the
   # SE service. The routing method for this AS is 'None'
   t$addTag("AS", attrs=c(id=paste("AS",i,sep="_"), routing="None"), close=FALSE)
-  t$addTag("host", attrs=c(id=i, power="5Gf"))
+  t$addTag("host", attrs=c(id=i, power="5Gf", core=48))
   t$closeTag()
 }
 
