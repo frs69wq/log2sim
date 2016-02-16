@@ -95,7 +95,7 @@ sed "1d" $file_transfer | \
        } else {\
          if ($NF == "2") {\
          if (!($3 in se)){se[$3];\
-           print "\t<host id=\"" $3 "\" power=\"5Gf\"/ core=\"48\">\n" \
+           print "\t<host id=\"" $3 "\" power=\"5Gf\" core=\"48\"/>\n" \
                  "\t<link id=\"" $3 "_link\" bandwidth=\"1Gbps\"\
  latency=\"500us\" sharing_policy=\"FULLDUPLEX\"/>\n" \
                  "\t<host_link id=\"" $3 "\" up=\"" $3 "_link_UP\"\
