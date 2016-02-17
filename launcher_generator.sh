@@ -115,8 +115,8 @@ echo 'case $platform_type in
             platform_file="simgrid_files/${platform_type_AS}_platform_'${workflow_dir}'.xml"
             run=$cmd" "${platform_file}" "${params}
             echo -e "\\t\\t$run"
-            $run  1> timings/simulated_time_on_AS_v${version}.csv \
-            2> csv_files/simulated_file_transfer_on_AS_v${version}.csv
+            $run  1> timings/simulated_time_on_${platform_type_AS}_v${version}.csv \
+            2> csv_files/simulated_file_transfer_on_${platform_type_AS}_v${version}.csv
         done   
         ;;
 
@@ -125,14 +125,14 @@ esac' >> $output
 echo -e 'version=3\n' >> $output
 echo 'if [ $platform_type == "AS" ]
 then 
-  for platform_type in "AS_Avg_Fatpipe" "AS_Max_Shared"
+  for platform_type_AS in "AS_Avg_Fatpipe" "AS_Max_Shared"
   do
       echo -e "\\tSimulate on AS  - version ${version}" 
-      platform_file="simgrid_files/${platform_type}_platform_'${workflow_dir}'.xml"
+      platform_file="simgrid_files/${platform_type_AS}_platform_'${workflow_dir}'.xml"
       run=$cmd" ${platform_file} simgrid_files/'${deployment_file2}' '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose}"
       echo -e "\\t\\t$run"
-      $run  1> timings/simulated_time_on_AS_v${version}.csv \
-            2> csv_files/simulated_file_transfer_on_AS_v${version}.csv
+      $run  1> timings/simulated_time_on_${platform_type_AS}_v${version}.csv \
+            2> csv_files/simulated_file_transfer_on_${platform_type_AS}_v${version}.csv
   done   
 fi' >> $output
 
