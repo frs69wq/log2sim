@@ -339,5 +339,5 @@ for(n in 1:length(platform_out)){
     t$closeTag()
 
     # Save the XML tree to disk
-    cat(saveXML(t), file=paste(output_dir,"/AS_platform_",platform_out[n],workflow_name,".xml", sep=""))
+    cat(saveXML(t), file=paste(output_dir,"/AS_",platform_out[n],"platform_",workflow_name,".xml", sep=""))
 }
