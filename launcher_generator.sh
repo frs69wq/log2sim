@@ -34,6 +34,7 @@ total_particle_number=$(awk '/] Initial number of particles:/''{print $NF}' \
 if [ $cheat != "no" ]
 then 
     total_particle_number=$number_of_gate_jobs
+    number_of_merge_jobs=1
 fi
 
 sos_time=300
@@ -88,7 +89,7 @@ echo 'params="simgrid_files/'${deployment_file}' \
 echo -e "\n" >> $output
 
 echo 'case $platform_type in 
-   "AS"|"mock" )
+   "AS_Avg_Fatpipe"|"AS_Max_Shared"|"mock" )
         platform_file="simgrid_files/${platform_type}_platform_'${workflow_dir}'.xml"
         echo -e "\\tSimulate on ${platform_type}"
         run=$cmd" "${platform_file}" "${params}
@@ -97,7 +98,7 @@ echo 'case $platform_type in
         2> csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
         ;;
    "all" )
-        for platform_type in "AS" "mock"
+        for platform_type in "AS_Avg_Fatpipe" "AS_Max_Shared" "mock"
         do
            platform_file="simgrid_files/${platform_type}_platform_'${workflow_dir}'.xml"
            echo -e "\\tSimulate on ${platform_type}"
@@ -107,17 +108,32 @@ echo 'case $platform_type in
            2> csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
         done
         ;;
+    "AS" )
+       for platform_type_AS in "AS_Avg_Fatpipe" "AS_Max_Shared"
+        do
+            echo -e "\\tSimulate on AS  - version ${version}" 
+            platform_file="simgrid_files/${platform_type_AS}_platform_'${workflow_dir}'.xml"
+            run=$cmd" "${platform_file}" "${params}
+            echo -e "\\t\\t$run"
+            $run  1> timings/simulated_time_on_AS_v${version}.csv \
+            2> csv_files/simulated_file_transfer_on_AS_v${version}.csv
+        done   
+        ;;
+
 esac' >> $output
 
 echo -e 'version=3\n' >> $output
 echo 'if [ $platform_type == "AS" ]
 then 
-echo -e "\\tSimulate on AS  - version ${version}" 
-platform_file="simgrid_files/AS_platform_'${workflow_dir}'.xml"
-run=$cmd" ${platform_file} simgrid_files/'${deployment_file2}' '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose}"
-echo -e "\\t\\t$run"
-$run  1> timings/simulated_time_on_AS_v${version}.csv \
-      2> csv_files/simulated_file_transfer_on_AS_v${version}.csv
+  for platform_type in "AS_Avg_Fatpipe" "AS_Max_Shared"
+  do
+      echo -e "\\tSimulate on AS  - version ${version}" 
+      platform_file="simgrid_files/${platform_type}_platform_'${workflow_dir}'.xml"
+      run=$cmd" ${platform_file} simgrid_files/'${deployment_file2}' '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose}"
+      echo -e "\\t\\t$run"
+      $run  1> timings/simulated_time_on_AS_v${version}.csv \
+            2> csv_files/simulated_file_transfer_on_AS_v${version}.csv
+  done   
 fi' >> $output
 
 #give execution right to the generated file in .sh
