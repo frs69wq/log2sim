@@ -30,7 +30,6 @@ db_dump="db_dump.csv"
 worker_nodes="worker_nodes.csv"
 file_transfer="file_transfer.csv"
 real_times="real_times.csv"
-se_bandwidth="se_bandwidth.csv"
 
 # Set default SE name
 defSE="ccsrm02.in2p3.fr"
@@ -117,8 +116,6 @@ info "\tDeployment file: deployment_${workflow_dir}*.xml ... created."
 
 info "Generating platform files ..."
 
-cmd="./platform_generator.sh ${workflow_dir} initial"
-info "\t$cmd"
 $cmd
 cmd="./platform_generator.R ${workflow_dir} initial"
 info "\t$cmd"
@@ -126,8 +123,8 @@ $cmd
 cmd="./mock_platform_generator.sh ${workflow_dir} initial"
 info "\t$cmd"
 $cmd
-info "\tPlatform files: platform_${workflow_dir}_[avg/max]_[a/]symmetric.xml
- [AS/mock]_platform_${workflow_dir}.xml ... created."
+info "\tPlatform files: AS_platform_[avg/max]${workflow_dir}.xml
+ mock_platform${workflow_dir}.xml ... created."
 
 ##############################################################################
 #                                                                            #
@@ -149,16 +146,15 @@ info "\tLauncher: simulate_$workflow_dir.sh ... created."
 echo -e "Data for $workflow_dir originally produced on: "$(date +"%D %T")"\n
 Directory organization:
 \t./ -> simulate_$workflow_dir.sh  Analysis_${workflow_dir}.Rmd README
-\tcsv_files/ -> $db_dump $worker_nodes $file_transfer $se_bandwidth
+\tcsv_files/ -> $db_dump $worker_nodes $file_transfer
 \tsimgrid_files/ -> XML files and $LFC_catalog
 \ttimings/ -> $real_times\n
 To partially regenerate some files do:
 \t../../scripts/deployment_generator.sh ${workflow_dir}
 \t../../scripts/deployment_generator.R ${workflow_dir}
-\t../../scripts/platform_generator.sh ${workflow_dir}
 \t../../scripts/platform_generator.R ${workflow_dir}
 \t../../scripts/launcher_generator.sh ${workflow_dir}
-\t../../scripts/mock_generator.sh ${workflow_dir}\n" > \
+\t../../scripts/mock_platform_generator.sh ${workflow_dir}\n" > \
 README
 
 ##############################################################################
@@ -185,11 +181,11 @@ then
 fi
 info "\t$output_dir -> simulate_$workflow_dir.sh"\
      " README Analysis_${workflow_dir}.Rmd"
-info "\t$output_dir/csv_files/ -> $db_dump $worker_nodes $file_transfer $se_bandwidth"
+info "\t$output_dir/csv_files/ -> $db_dump $worker_nodes $file_transfer"
 info "\t$output_dir/simgrid_files/ -> XML files and $LFC_catalog"
 info "\t$output_dir/timings/ -> $real_times"
 
 mv -f simulate_*.sh Analysis_$workflow_dir.Rmd README $output_dir/
 mv -f *.xml  $LFC_catalog $output_dir/simgrid_files
-mv -f $db_dump $worker_nodes $file_transfer $se_bandwidth $output_dir/csv_files
+mv -f $db_dump $worker_nodes $file_transfer $output_dir/csv_files
 mv -f $real_times $output_dir/timings

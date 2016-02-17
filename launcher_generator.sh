@@ -57,8 +57,7 @@ fi
 echo '#! /bin/bash -u' > $output
 
 echo -e '# Command lines arguments are:\n' \
-        '# Platform files: platform_'$workflow_dir'_[max/av]_[a/]symmetric.xml\n' \
-        '#                  [AS/mock]_platform_'$workflow_dir'.xml\n'\
+        '# Platform files:  [AS/mock]_platform_'$workflow_dir'.xml\n'\
         '# Deployment file: '$deployment_file'\n' \
         '# Initial number particles: '$total_particle_number'\n' \
         '# Number of gate jobs: '$number_of_gate_jobs'\n' \
@@ -89,14 +88,6 @@ echo 'params="simgrid_files/'${deployment_file}' \
 echo -e "\n" >> $output
 
 echo 'case $platform_type in 
-   "max_symmetric"|"max_asymmetric"|"avg_symmetric"|"avg_asymmetric" )
-        platform_file="simgrid_files/platform_'${workflow_dir}'_${platform_type}.xml"
-        echo -e "\\tSimulate on ${platform_type}"
-        run=$cmd" "${platform_file}" "${params}
-        echo -e "\\t\\t$run"
-        $run 1> timings/simulated_time_on_${platform_type}_v${version}.csv \
-        2> csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv 
-        ;;
    "AS"|"mock" )
         platform_file="simgrid_files/${platform_type}_platform_'${workflow_dir}'.xml"
         echo -e "\\tSimulate on ${platform_type}"
@@ -106,15 +97,6 @@ echo 'case $platform_type in
         2> csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
         ;;
    "all" )
-        for platform_type in "max_symmetric" "max_asymmetric" "avg_symmetric" "avg_asymmetric"
-        do
-           platform_file="simgrid_files/platform_'${workflow_dir}'_${platform_type}.xml"
-           echo -e "\\tSimulate on ${platform_type}"
-           run=$cmd" "${platform_file}" "${params}
-           echo -e "\\t\\t$run"
-           $run  1> timings/simulated_time_on_${platform_type}_v${version}.csv \
-           2> csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
-        done
         for platform_type in "AS" "mock"
         do
            platform_file="simgrid_files/${platform_type}_platform_'${workflow_dir}'.xml"
