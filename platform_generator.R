@@ -136,6 +136,21 @@ if (TRUE %in% is.infinite(SE_to_site_bandwidth$MaxBandwidth)) {
 }
 
 
+# Compute the max bandwidth for the large file transfers( FileSize>90Mb, release for Gate or Merge)
+Max_Bandwidth_largefile <- ddply(subset(transfers, UpDown==2 & FileSize > 90000000), 
+                             c("Source","SiteName"), summarize, 
+                             MaxBandwidth=max(Bandwidth),
+                             .drop=TRUE)
+
+
+#Replace the max bandwidth for the links which has large file transfers 
+for(i in 1:nrow(Max_Bandwidth_largefile)){
+
+  SE_to_site_bandwidth[SE_to_site_bandwidth$Source ==Max_Bandwidth_largefile[i,]$Source
+                      &SE_to_site_bandwidth$SiteName ==Max_Bandwidth_largefile[i,]$SiteName,]$MaxBandwidth<- Max_Bandwidth_largefile[i,]$MaxBandwidth
+
+}
+
 
 site_to_SE_bandwidth = ddply(transfers[transfers$UpDown != 2,], 
                              c("Destination","SiteName"),summarize, 
