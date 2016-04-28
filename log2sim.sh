@@ -123,8 +123,8 @@ $cmd
 cmd="./mock_platform_generator.R ${workflow_dir} initial"
 info "\t$cmd"
 $cmd
-info "\tPlatform files: AS_platform_[avg/max]${workflow_dir}.xml
- mock_platform${workflow_dir}.xml ... created."
+info "\tPlatform files: AS_[Avg_Fatpipe/Max_Shared]_platform_${workflow_dir}.xml
+ mock_platform_${workflow_dir}.xml ... created."
 
 ##############################################################################
 #                                                                            #
