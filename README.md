@@ -11,7 +11,7 @@ Requirements:
 + The VIPSimulator 
   + Available at https://github.com/frs69wq/VIPSimulator
 + A stable Java archive of SimGrid
-  + Available at http://gforge.inria.fr/frs/download.php/file/35216/simgrid.jar
+  + Available at http://gforge.inria.fr/frs/download.php/file/35818/simgrid.jar
 
 Environment variables setting:
   + To parse original VIP/GATE execution logs
