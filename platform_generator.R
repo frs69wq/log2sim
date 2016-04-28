@@ -120,8 +120,8 @@ Max_Bandwidth_largefile <- ddply(subset(transfers, UpDown==2 & FileSize > 900000
 #Replace the max bandwidth for the links which has large file transfers 
 for(i in 1:nrow(Max_Bandwidth_largefile)){
   SE_to_site_bandwidth[SE_to_site_bandwidth$Source == Max_Bandwidth_largefile[i,]$Source &
-                         SE_to_site_bandwidth$SiteName == Max_Bandwidth_largefile[i,]$SiteName,]$MaxBandwidth
-  <- Max_Bandwidth_largefile[i,]$MaxBandwidth
+                         SE_to_site_bandwidth$SiteName == Max_Bandwidth_largefile[i,]$SiteName,]$MaxBandwidth <-
+    Max_Bandwidth_largefile[i,]$MaxBandwidth
 }
 
 site_to_SE_bandwidth = ddply(transfers[transfers$UpDown != 2,], c("Destination","SiteName"),summarize, 
@@ -153,7 +153,7 @@ for(n in 1:length(platform_out)){
 
     t$addTag("AS", attrs=c(id="Services", routing="Cluster"), close=FALSE)
     t$addTag("router", attrs=c(id="Services_router"))
-    t$addTag("backbone",attrs=c(id="Services_backbone", bandwidth="100GBps", latency="750us"))
+    t$addTag("backbone",attrs=c(id="Services_backbone", bandwidth="100Gbps", latency="750us"))
 
     t$addTag("host", attrs=c(id="vip.creatis.insa-lyon.fr", speed="5Gf",core="48"))
     t$addTag("link", attrs=c(id="vip.creatis.insa-lyon.fr_link", bandwidth="10Gbps", latency="500us",
@@ -174,10 +174,9 @@ for(n in 1:length(platform_out)){
       #     * a backbone
       #     * all the used worker nodes that belong to this site
 
-      t$addTag("AS", attrs=c(id=paste("AS",i, sep="_"), routing="Cluster"), 
-               close=FALSE)
+      t$addTag("AS", attrs=c(id=paste("AS",i, sep="_"), routing="Cluster"), close=FALSE)
       t$addTag("router", attrs=c(id=paste("AS",i,"router", sep="_")))
-      t$addTag("backbone",attrs=c(id=paste(i,"backbone", sep="_"), bandwidth="100GBps", latency="750us"))
+      t$addTag("backbone",attrs=c(id=paste(i,"backbone", sep="_"), bandwidth="100Gbps", latency="750us"))
       
       w = workers[workers$SiteName == i,]
       for (j in 1:nrow(w)){
@@ -253,12 +252,9 @@ for(n in 1:length(platform_out)){
     }
 
     for (i in 1:nrow(SE_to_site_bandwidth)){
-    # if (SE_to_site_bandwidth[i,1] %in% site_to_SE_bandwidth$Destination){
       if (SE_to_site_bandwidth[i,2] %in% 
             site_to_SE_bandwidth[site_to_SE_bandwidth$Destination == SE_to_site_bandwidth[i,1],2]){
         sym = "NO"
-        # print(paste("ratio download/upload:",SE_to_site_bandwidth[i,3]/site_to_SE_bandwidth[site_to_SE_bandwidth$Destination ==
-        #                                                               SE_to_site_bandwidth[i,1]&site_to_SE_bandwidth$SiteName == SE_to_site_bandwidth[i,2],3]  ))
       } else {
         sym="YES"
       }
