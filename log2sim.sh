@@ -120,7 +120,7 @@ $cmd
 cmd="./platform_generator.R ${workflow_dir} initial"
 info "\t$cmd"
 $cmd
-cmd="./mock_platform_generator.sh ${workflow_dir} initial"
+cmd="./mock_platform_generator.R ${workflow_dir} initial"
 info "\t$cmd"
 $cmd
 info "\tPlatform files: AS_platform_[avg/max]${workflow_dir}.xml
@@ -154,7 +154,7 @@ To partially regenerate some files do:
 \t../../scripts/deployment_generator.R ${workflow_dir}
 \t../../scripts/platform_generator.R ${workflow_dir}
 \t../../scripts/launcher_generator.sh ${workflow_dir}
-\t../../scripts/mock_platform_generator.sh ${workflow_dir}\n" > \
+\t../../scripts/mock_platform_generator.R ${workflow_dir}\n" > \
 README
 
 ##############################################################################
