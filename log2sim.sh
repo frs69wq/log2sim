@@ -100,9 +100,6 @@ info "\t Job timings: real_times.csv ... created."
 
 info "Generating deployment files ..."
 
-cmd="./deployment_generator.sh ${workflow_dir} initial"
-info "\t$cmd"
-$cmd
 cmd="./deployment_generator.R ${workflow_dir} initial"
 info "\t$cmd"
 $cmd
@@ -150,7 +147,6 @@ Directory organization:
 \tsimgrid_files/ -> XML files and $LFC_catalog
 \ttimings/ -> $real_times\n
 To partially regenerate some files do:
-\t../../scripts/deployment_generator.sh ${workflow_dir}
 \t../../scripts/deployment_generator.R ${workflow_dir}
 \t../../scripts/platform_generator.R ${workflow_dir}
 \t../../scripts/launcher_generator.sh ${workflow_dir}
