@@ -31,8 +31,8 @@ defSE="ccsrm02.in2p3.fr"
 output_file="$output_dir/deployment_${workflow}.xml"
 
 header="<?xml version='1.0'?>"\
-"\n<!DOCTYPE platform SYSTEM \"http://simgrid.gforge.inria.fr/simgrid.dtd\">"\
-"\n<platform version=\"3\">\n"\
+"\n<!DOCTYPE platform SYSTEM \"http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd\">"\
+"\n<platform version=\"4\">\n"\
 "\t<process host=\"vip.creatis.insa-lyon.fr\" function=\"VIPServer\"/>\n"
 
 echo -e $header > $output_file

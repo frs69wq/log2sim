@@ -181,7 +181,7 @@ for(n in 1:length(platform_out)){
       w = workers[workers$SiteName == i,]
       for (j in 1:nrow(w)){
         # Declaration of the host and its close SE
-        t$addTag("host", attrs=c(id=w[j,2], power=w[j,4], core=w[j,3]), close=FALSE)
+        t$addTag("host", attrs=c(id=w[j,2], speed=w[j,4], core=w[j,3]), close=FALSE)
         t$addTag("prop", attrs=c(id="closeSE", value=w[j,8]))
         t$closeTag()
         

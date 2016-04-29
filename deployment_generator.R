@@ -79,7 +79,7 @@ merge_arguments <- merge(merge(uploads_merge, start_and_compute_times),
 
 #### Generation of the XML tree
 # Creation and header
-t = xmlTree("platform", attrs=c(version="3"), dtd='platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid.dtd"')
+t = xmlTree("platform", attrs=c(version="4"), dtd='platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd"')
 
 # VIP Server
 t$addTag("process", attrs=c(host="vip.creatis.insa-lyon.fr", fun="VIPServer"))
