@@ -10,6 +10,7 @@
 #### Required R packages
 library(XML)
 library(plyr)
+library(stats)
 #### Parsing command line arguments
 args = commandArgs(trailingOnly=TRUE)
 if (length(args) < 1) {
@@ -107,10 +108,17 @@ if (TRUE %in% is.nan(SE_to_site_bandwidth$AvgBandwidth)) {
     max(transfers[transfers$UpDown==2,]$Bandwidth)
 }
 
+if (TRUE %in% is.na(SE_to_site_bandwidth$AvgBandwidth)) {
+  SE_to_site_bandwidth[is.na(SE_to_site_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
+    max(transfers[transfers$UpDown==2,]$Bandwidth)
+}
+
 if (TRUE %in% is.infinite(SE_to_site_bandwidth$MaxBandwidth)) {
   SE_to_site_bandwidth[is.infinite(SE_to_site_bandwidth$MaxBandwidth),]$MaxBandwidth <- 
     max(transfers[transfers$UpDown==2,]$Bandwidth)
 }
+
+SE_to_site_bandwidth$SE_SITE <- paste(SE_to_site_bandwidth$Source,'_',SE_to_site_bandwidth$SiteName,sep='')
 
 # Compute the max bandwidth for the large file transfers( FileSize>90Mb, release for Gate or Merge)
 Max_Bandwidth_largefile <- ddply(subset(transfers, UpDown==2 & FileSize > 90000000), 
@@ -124,11 +132,104 @@ for(i in 1:nrow(Max_Bandwidth_largefile)){
     Max_Bandwidth_largefile[i,]$MaxBandwidth
 }
 
+#### Computing concurrency and apply corrective factor####
+
+db <- read.csv(paste(wd,'db_dump.csv', sep="/"), header = TRUE, 
+                      sep=' ',as.is=TRUE)
+gate_db <- subset(db, Command=="gate.sh")
+gate_downloads <- subset(raw_transfers, UpDown == 2& JobType == "gate")
+gate_downloads$SE_SITE <- paste(gate_downloads$Source,'_',gate_downloads$SiteName,sep='')
+
+n_file <- 3
+gate_downloads$Download_Start <- 0
+gate_downloads$Download_End <- 0
+gate_downloads <- gate_downloads[order(gate_downloads$JobId),]  
+gate_db <- gate_db[order(gate_db$JobId),]
+
+for(j in 1:nrow(gate_db)){
+  for(k in 1:n_file){
+    if(k==1){
+      gate_downloads[(j-1)*3+k,]$Download_Start = round(gate_db[j,]$DownloadStartTime)
+    }
+    else{
+      gate_downloads[(j-1)*3+k,]$Download_Start = 
+        round(gate_downloads[(j-1)*3+k-1,]$Download_End)
+    } 
+    gate_downloads[(j-1)*3+k,]$Download_End = 
+      gate_downloads[(j-1)*3+k,]$Download_Start + round(gate_downloads[(j-1)*3+k,]$Time/1000)
+  }
+}
+
+gate_downloads$Bandwidth <-gate_downloads$FileSize/(pmax(0.1,(gate_downloads$Time-1000)))
+gate_downloads$Time <- gate_downloads$Time/1000
+
+gate_downloads$concurrency <- 1
+
+# sampling 20 points to estimate the concurrency of each transfer
+n_point <- 20
+for(i in 1:nrow(gate_downloads)){
+  tmp <- vector(mode="numeric", length=n_point)
+  step <- (gate_downloads[i,]$Download_End - gate_downloads[i,]$Download_Start)/n_point
+  for(s in 1: n_point){
+    tmp[s] <- nrow(subset(gate_downloads, SE_SITE == gate_downloads[i,]$SE_SITE
+                                         &FileSize == gate_downloads[i,]$FileSize
+                                         &Download_Start <= (step*(s-1)+gate_downloads[i,]$Download_Start)
+                                         &Download_End >= (step*(s-1)+gate_downloads[i,]$Download_Start)))
+  }
+  # take the mean of concurrency of all sampling points
+  if(mean(tmp) > 1){
+    gate_downloads[i,]$concurrency <- mean(tmp)
+  }
+}
+
+## function to find the concurrency of a link
+## if the max is given by several transfers, the maximum concurrency is taken for this link.
+Concurrency_link <- function(Bandwidth, concurrency){
+  pos <- which(Bandwidth == max(Bandwidth))
+  con <- concurrency[pos[1]]
+  if(length(pos)>1){
+    for(i in 2:length(pos)){
+      if(concurrency[pos[i]]> con){
+        con <- concurrency[pos[i]]
+      }
+    }
+  }
+  return (con)
+}
+
+
+Links = ddply(subset(gate_downloads,FileSize == max(gate_downloads$FileSize)),
+           c("SE_SITE"), summarize, 
+           Ratio=max(Bandwidth)/mean(Bandwidth),
+           concurrency= Concurrency_link(Bandwidth,concurrency),
+           .drop=TRUE)
+
+
+Target_links <- subset(Links, Ratio <= 1.696)
+
+# apply the factor to all target links
+if(nrow(Target_links) !=0){
+  for(i in 1:nrow(Target_links)){
+
+    SE_to_site_bandwidth[SE_to_site_bandwidth$SE_SITE ==Target_links[i,]$SE_SITE,]$MaxBandwidth<- 
+    SE_to_site_bandwidth[SE_to_site_bandwidth$SE_SITE ==Target_links[i,]$SE_SITE,]$MaxBandwidth*Target_links[i,]$concurrency
+
+  } 
+}
+
+##############################
+
+
 site_to_SE_bandwidth = ddply(transfers[transfers$UpDown != 2,], c("Destination","SiteName"),summarize, 
                              AvgBandwidth=round(mean(Bandwidth),2),MaxBandwidth=max(Bandwidth),.drop=FALSE)
 
 if (TRUE %in% is.nan(site_to_SE_bandwidth$AvgBandwidth)) {
   site_to_SE_bandwidth[is.nan(site_to_SE_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
+    max(transfers[transfers$UpDown != 2,]$Bandwidth)
+}
+
+if (TRUE %in% is.na(site_to_SE_bandwidth$AvgBandwidth)) {
+  site_to_SE_bandwidth[is.na(site_to_SE_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
     max(transfers[transfers$UpDown != 2,]$Bandwidth)
 }
 
