@@ -45,32 +45,13 @@ transfers=raw_transfers[raw_transfers$FileSize >12,]
 
 # Compute the observed bandwidth for each individual file transfer
 # remove 1 sec from the transfer time (dispatched as network/control latency)
-transfers$Bandwidth <- transfers$FileSize/(pmax(1,(transfers$Time-1000)))
-
-# Discriminate transfers according to computed bandwidth. The problem is that 
-# for small files, values are extremely small, hence unrealistic. 
-slow_transfers=transfers[transfers$Bandwidth<100,]
-transfers=transfers[transfers$Bandwidth>100,]
+transfers$Bandwidth <- transfers$FileSize/(pmax(0.1,(transfers$Time-1000)))
+transfers$Time <- transfers$Time/1000
 
 # Store the list of identified grid sites and SEs
 sites <- unique(workers$SiteName)
 storage_elements <- unique(c(transfers[transfers$UpDown == 1,]$Destination, transfers[transfers$UpDown == 2,]$Source))
 
-# Identify if there exists some SE for which bandwidth is always low. If there is, they have to be described though
-# in the platform file (with a minimum default bandwidth of 100kBps)
-slow_se <- unique(c(slow_transfers[slow_transfers$UpDown == 1,]$Destination,
-                    slow_transfers[slow_transfers$UpDown == 2,]$Source))
-slow_se <- slow_se[! slow_se %in% storage_elements]
-
-if (length(slow_se) > 0) {
-  slow_transfers = slow_transfers[(slow_transfers$UpDown == 1 & slow_transfers$Destination %in% slow_se) | 
-                                    (slow_transfers$UpDown == 2 & slow_transfers$Source %in% slow_se),]
-  slow_transfers$Bandwidth <- 100
-
-  # Include back the slow SE(s) and their modified transfers into the data frames used for generation
-  storage_elements <- c(storage_elements,slow_se)
-  transfers = rbind(transfers,slow_transfers)
-}
 
 # Also Identify if there exists some SE used only for upload-tests. If there is, they have to be described though in 
 # the platform file (with a minimum default bandwidth of 100kBps). 
@@ -95,54 +76,24 @@ if (length(unique(transfers[!transfers$Destination %in% local_ses & transfers$Up
   warning(paste("WARNING: Some SEs are used for upload without being declared as local.", workflow_name))
 }
 
-# Compute the respective average bandwidth from (then to) these SE to (then from)each grid site. Let ddply produce NaN
-# entries. The rationale is that during the simulation the LFC can pick a SE for download input that was not selected 
-# during the real execution. To circumvent this, we add a default bandwidth for the missing connections. This value 
-# is set to the maximum observed bandwidth.
-
-SE_to_site_bandwidth = ddply(transfers[transfers$UpDown==2,], c("Source","SiteName"), summarize, 
-                             AvgBandwidth=round(mean(Bandwidth),2), MaxBandwidth=max(Bandwidth), .drop=FALSE)
-
-if (TRUE %in% is.nan(SE_to_site_bandwidth$AvgBandwidth)) {
-  SE_to_site_bandwidth[is.nan(SE_to_site_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
-    max(transfers[transfers$UpDown==2,]$Bandwidth)
-}
-
-if (TRUE %in% is.na(SE_to_site_bandwidth$AvgBandwidth)) {
-  SE_to_site_bandwidth[is.na(SE_to_site_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
-    max(transfers[transfers$UpDown==2,]$Bandwidth)
-}
-
-if (TRUE %in% is.infinite(SE_to_site_bandwidth$MaxBandwidth)) {
-  SE_to_site_bandwidth[is.infinite(SE_to_site_bandwidth$MaxBandwidth),]$MaxBandwidth <- 
-    max(transfers[transfers$UpDown==2,]$Bandwidth)
-}
-
-SE_to_site_bandwidth$SE_SITE <- paste(SE_to_site_bandwidth$Source,'_',SE_to_site_bandwidth$SiteName,sep='')
-
-# Compute the max bandwidth for the large file transfers( FileSize>90Mb, release for Gate or Merge)
-Max_Bandwidth_largefile <- ddply(subset(transfers, UpDown==2 & FileSize > 90000000), 
-                             c("Source","SiteName"), summarize, MaxBandwidth=max(Bandwidth), .drop=TRUE)
-
-
-#Replace the max bandwidth for the links which has large file transfers 
-for(i in 1:nrow(Max_Bandwidth_largefile)){
-  SE_to_site_bandwidth[SE_to_site_bandwidth$Source == Max_Bandwidth_largefile[i,]$Source &
-                         SE_to_site_bandwidth$SiteName == Max_Bandwidth_largefile[i,]$SiteName,]$MaxBandwidth <-
-    Max_Bandwidth_largefile[i,]$MaxBandwidth
-}
-
 #### Computing concurrency and apply corrective factor####
 
 db <- read.csv(paste(wd,'db_dump.csv', sep="/"), header = TRUE, 
                       sep=' ',as.is=TRUE)
 gate_db <- subset(db, Command=="gate.sh")
-gate_downloads <- subset(raw_transfers, UpDown == 2& JobType == "gate")
+gate_downloads <- subset(transfers, UpDown == 2& JobType == "gate")
+merge_downloads <- subset(transfers, UpDown == 2& JobType == "merge")
+
 gate_downloads$SE_SITE <- paste(gate_downloads$Source,'_',gate_downloads$SiteName,sep='')
+merge_downloads$SE_SITE <- paste(merge_downloads$Source,'_',merge_downloads$SiteName,sep='')
+
 
 n_file <- 3
 gate_downloads$Download_Start <- 0
 gate_downloads$Download_End <- 0
+merge_downloads$Download_Start <- 0
+merge_downloads$Download_End <- 0
+
 gate_downloads <- gate_downloads[order(gate_downloads$JobId),]  
 gate_db <- gate_db[order(gate_db$JobId),]
 
@@ -156,68 +107,62 @@ for(j in 1:nrow(gate_db)){
         round(gate_downloads[(j-1)*3+k-1,]$Download_End)
     } 
     gate_downloads[(j-1)*3+k,]$Download_End = 
-      gate_downloads[(j-1)*3+k,]$Download_Start + round(gate_downloads[(j-1)*3+k,]$Time/1000)
+      gate_downloads[(j-1)*3+k,]$Download_Start + round(gate_downloads[(j-1)*3+k,]$Time)
   }
 }
 
-gate_downloads$Bandwidth <-gate_downloads$FileSize/(pmax(0.1,(gate_downloads$Time-1000)))
-gate_downloads$Time <- gate_downloads$Time/1000
-
 gate_downloads$concurrency <- 1
 
-# sampling 20 points to estimate the concurrency of each transfer
-n_point <- 20
+# for merge download trqnsfers, the concurrency is considered as 1
+merge_downloads$concurrency <- 1
+
+
+
+# divide each transfer into 50 intervals to estimate the nominal bandwidth (only for Gate downloads)
+n_interval <- 50
 for(i in 1:nrow(gate_downloads)){
-  tmp <- vector(mode="numeric", length=n_point)
-  step <- (gate_downloads[i,]$Download_End - gate_downloads[i,]$Download_Start)/n_point
-  for(s in 1: n_point){
-    tmp[s] <- nrow(subset(gate_downloads, SE_SITE == gate_downloads[i,]$SE_SITE
+  conc <- vector(mode="numeric", length=n_interval)
+  step <- (gate_downloads[i,]$Download_End - gate_downloads[i,]$Download_Start)/n_interval
+  for(s in 1: n_interval){
+    conc[s] <- nrow(subset(gate_downloads, SE_SITE == gate_downloads[i,]$SE_SITE
                                          &FileSize == gate_downloads[i,]$FileSize
                                          &Download_Start <= (step*(s-1)+gate_downloads[i,]$Download_Start)
                                          &Download_End >= (step*(s-1)+gate_downloads[i,]$Download_Start)))
   }
-  # take the mean of concurrency of all sampling points
-  if(mean(tmp) > 1){
-    gate_downloads[i,]$concurrency <- mean(tmp)
-  }
+
+  tmp <- 1/conc
+  gate_downloads[i,]$concurrency <- n_interval/sum(tmp)
 }
 
-## function to find the concurrency of a link
-## if the max is given by several transfers, the maximum concurrency is taken for this link.
-Concurrency_link <- function(Bandwidth, concurrency){
-  pos <- which(Bandwidth == max(Bandwidth))
-  con <- concurrency[pos[1]]
-  if(length(pos)>1){
-    for(i in 2:length(pos)){
-      if(concurrency[pos[i]]> con){
-        con <- concurrency[pos[i]]
-      }
-    }
-  }
-  return (con)
-}
+gate_downloads$Bandwidth_improved <- gate_downloads$Bandwidth * gate_downloads$concurrency
+merge_downloads$Bandwidth_improved <- merge_downloads$Bandwidth * merge_downloads$concurrency
 
 
-Links = ddply(subset(gate_downloads,FileSize == max(gate_downloads$FileSize)),
-           c("SE_SITE"), summarize, 
-           Ratio=max(Bandwidth)/mean(Bandwidth),
-           concurrency= Concurrency_link(Bandwidth,concurrency),
-           .drop=TRUE)
+df_download <- rbind(gate_downloads, merge_downloads)
 
-
-Target_links <- subset(Links, Ratio <= 1.696)
-
-# apply the factor to all target links
-if(nrow(Target_links) !=0){
-  for(i in 1:nrow(Target_links)){
-
-    SE_to_site_bandwidth[SE_to_site_bandwidth$SE_SITE ==Target_links[i,]$SE_SITE,]$MaxBandwidth<- 
-    SE_to_site_bandwidth[SE_to_site_bandwidth$SE_SITE ==Target_links[i,]$SE_SITE,]$MaxBandwidth*Target_links[i,]$concurrency
-
-  } 
-}
 
 ##############################
+
+# Compute the respective average bandwidth from (then to) these SE to (then from)each grid site. Let ddply produce NaN
+# entries. The rationale is that during the simulation the LFC can pick a SE for download input that was not selected 
+# during the real execution. To circumvent this, we add a default bandwidth for the missing connections. This value 
+# is set to the maximum observed bandwidth.
+
+SE_to_site_bandwidth = ddply(df_download, c("Source","SiteName"), summarize, 
+                             AvgBandwidth=round(mean(Bandwidth),2), MaxBandwidth=max(Bandwidth_improved), .drop=FALSE)
+
+
+if (TRUE %in% is.nan(SE_to_site_bandwidth$AvgBandwidth)) {
+  SE_to_site_bandwidth[is.nan(SE_to_site_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
+    max(transfers[transfers$UpDown==2,]$Bandwidth)
+}
+
+if (TRUE %in% is.infinite(SE_to_site_bandwidth$MaxBandwidth)) {
+  SE_to_site_bandwidth[is.infinite(SE_to_site_bandwidth$MaxBandwidth),]$MaxBandwidth <- 
+    max(transfers[transfers$UpDown==2,]$Bandwidth)
+}
+
+SE_to_site_bandwidth$SE_SITE <- paste(SE_to_site_bandwidth$Source,'_',SE_to_site_bandwidth$SiteName,sep='')
 
 
 site_to_SE_bandwidth = ddply(transfers[transfers$UpDown != 2,], c("Destination","SiteName"),summarize, 
@@ -225,11 +170,6 @@ site_to_SE_bandwidth = ddply(transfers[transfers$UpDown != 2,], c("Destination",
 
 if (TRUE %in% is.nan(site_to_SE_bandwidth$AvgBandwidth)) {
   site_to_SE_bandwidth[is.nan(site_to_SE_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
-    max(transfers[transfers$UpDown != 2,]$Bandwidth)
-}
-
-if (TRUE %in% is.na(site_to_SE_bandwidth$AvgBandwidth)) {
-  site_to_SE_bandwidth[is.na(site_to_SE_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
     max(transfers[transfers$UpDown != 2,]$Bandwidth)
 }
 
