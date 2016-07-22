@@ -46,7 +46,11 @@ transfers=raw_transfers[raw_transfers$FileSize >12,]
 # Compute the observed bandwidth for each individual file transfer
 # remove 1 sec from the transfer time (dispatched as network/control latency)
 transfers$Bandwidth <- transfers$FileSize/(pmax(0.1,(transfers$Time-1000)))
+
+#Convert the real execution times from milliseconds to seconds
 transfers$Time <- transfers$Time/1000
+
+transfers$SE_SITE <- paste(transfers$Source,'_',transfers$SiteName,sep='')
 
 # Store the list of identified grid sites and SEs
 sites <- unique(workers$SiteName)
@@ -58,10 +62,12 @@ storage_elements <- unique(c(transfers[transfers$UpDown == 1,]$Destination, tran
 upload_test_se <- unique(raw_transfers[raw_transfers$UpDown == 0,]$Destination)
 upload_test_se <- upload_test_se[!upload_test_se %in% storage_elements]
 
+workflow_name
+
 if (length(upload_test_se) > 0) {
   upload_test_only = raw_transfers[(raw_transfers$UpDown == 0 & raw_transfers$Destination %in% upload_test_se),]
   upload_test_only$Bandwidth <- 100
-
+  upload_test_only$SE_SITE <- paste(upload_test_only$Source,'_',upload_test_only$SiteName,sep='')
   # Include back the upload-test only SE(s) and their modified transfers into 
   # the data frames used for generation
   storage_elements <- c(storage_elements,upload_test_se)
@@ -76,6 +82,8 @@ if (length(unique(transfers[!transfers$Destination %in% local_ses & transfers$Up
   warning(paste("WARNING: Some SEs are used for upload without being declared as local.", workflow_name))
 }
 
+
+
 #### Computing concurrency and apply corrective factor####
 
 db <- read.csv(paste(wd,'db_dump.csv', sep="/"), header = TRUE, 
@@ -83,9 +91,6 @@ db <- read.csv(paste(wd,'db_dump.csv', sep="/"), header = TRUE,
 gate_db <- subset(db, Command=="gate.sh")
 gate_downloads <- subset(transfers, UpDown == 2& JobType == "gate")
 merge_downloads <- subset(transfers, UpDown == 2& JobType == "merge")
-
-gate_downloads$SE_SITE <- paste(gate_downloads$Source,'_',gate_downloads$SiteName,sep='')
-merge_downloads$SE_SITE <- paste(merge_downloads$Source,'_',merge_downloads$SiteName,sep='')
 
 
 n_file <- 3
@@ -113,16 +118,14 @@ for(j in 1:nrow(gate_db)){
 
 gate_downloads$concurrency <- 1
 
-# for merge download trqnsfers, the concurrency is considered as 1
-merge_downloads$concurrency <- 1
-
-
+#remove 1s as latency
+gate_downloads$Download_Start <- gate_downloads$Download_Start + 1
 
 # divide each transfer into 50 intervals to estimate the nominal bandwidth (only for Gate downloads)
 n_interval <- 50
 for(i in 1:nrow(gate_downloads)){
   conc <- vector(mode="numeric", length=n_interval)
-  step <- (gate_downloads[i,]$Download_End - gate_downloads[i,]$Download_Start)/n_interval
+  step <- (gate_downloads[i,]$Download_End - gate_downloads[i,]$Download_Start )/n_interval
   for(s in 1: n_interval){
     conc[s] <- nrow(subset(gate_downloads, SE_SITE == gate_downloads[i,]$SE_SITE
                                          &FileSize == gate_downloads[i,]$FileSize
@@ -130,15 +133,14 @@ for(i in 1:nrow(gate_downloads)){
                                          &Download_End >= (step*(s-1)+gate_downloads[i,]$Download_Start)))
   }
 
-  tmp <- 1/conc
-  gate_downloads[i,]$concurrency <- n_interval/sum(tmp)
+  gate_downloads[i,]$concurrency <- n_interval/sum(1/conc)
 }
 
-gate_downloads$Bandwidth_improved <- gate_downloads$Bandwidth * gate_downloads$concurrency
-merge_downloads$Bandwidth_improved <- merge_downloads$Bandwidth * merge_downloads$concurrency
-
+# for merge download transfers, the concurrency is considered as 1
+merge_downloads$concurrency <- 1
 
 df_download <- rbind(gate_downloads, merge_downloads)
+df_download$Bandwidth_improved <- df_download$Bandwidth * df_download$concurrency
 
 
 ##############################
@@ -161,8 +163,6 @@ if (TRUE %in% is.infinite(SE_to_site_bandwidth$MaxBandwidth)) {
   SE_to_site_bandwidth[is.infinite(SE_to_site_bandwidth$MaxBandwidth),]$MaxBandwidth <- 
     max(transfers[transfers$UpDown==2,]$Bandwidth)
 }
-
-SE_to_site_bandwidth$SE_SITE <- paste(SE_to_site_bandwidth$Source,'_',SE_to_site_bandwidth$SiteName,sep='')
 
 
 site_to_SE_bandwidth = ddply(transfers[transfers$UpDown != 2,], c("Destination","SiteName"),summarize, 
