@@ -48,7 +48,7 @@ transfers=raw_transfers[raw_transfers$FileSize >12,]
 transfers$Bandwidth <- transfers$FileSize/(pmax(0.1,(transfers$Time-1000)))
 
 #Convert the real execution times from milliseconds to seconds
-transfers$Time <- transfers$Time/1000
+transfers$Time <- round(transfers$Time/1000,2) 
 
 transfers$SE_SITE <- paste(transfers$Source,'_',transfers$SiteName,sep='')
 
@@ -62,7 +62,6 @@ storage_elements <- unique(c(transfers[transfers$UpDown == 1,]$Destination, tran
 upload_test_se <- unique(raw_transfers[raw_transfers$UpDown == 0,]$Destination)
 upload_test_se <- upload_test_se[!upload_test_se %in% storage_elements]
 
-workflow_name
 
 if (length(upload_test_se) > 0) {
   upload_test_only = raw_transfers[(raw_transfers$UpDown == 0 & raw_transfers$Destination %in% upload_test_se),]
@@ -88,52 +87,70 @@ if (length(unique(transfers[!transfers$Destination %in% local_ses & transfers$Up
 
 db <- read.csv(paste(wd,'db_dump.csv', sep="/"), header = TRUE, 
                       sep=' ',as.is=TRUE)
-gate_db <- subset(db, Command=="gate.sh")
+gate_db <- subset(db, Command=="gate.sh",select=c(JobId, DownloadStartTime))
 gate_downloads <- subset(transfers, UpDown == 2& JobType == "gate")
 merge_downloads <- subset(transfers, UpDown == 2& JobType == "merge")
 
 
-n_file <- 3
-gate_downloads$Download_Start <- 0
 gate_downloads$Download_End <- 0
 merge_downloads$Download_Start <- 0
 merge_downloads$Download_End <- 0
 
-gate_downloads <- gate_downloads[order(gate_downloads$JobId),]  
-gate_db <- gate_db[order(gate_db$JobId),]
+gate_downloads <- rename(merge(gate_downloads, gate_db, by=c("JobId")),
+                  c("DownloadStartTime" = "Download_Start"))
 
-for(j in 1:nrow(gate_db)){
-  for(k in 1:n_file){
-    if(k==1){
-      gate_downloads[(j-1)*3+k,]$Download_Start = round(gate_db[j,]$DownloadStartTime)
-    }
-    else{
-      gate_downloads[(j-1)*3+k,]$Download_Start = 
-        round(gate_downloads[(j-1)*3+k-1,]$Download_End)
-    } 
-    gate_downloads[(j-1)*3+k,]$Download_End = 
-      gate_downloads[(j-1)*3+k,]$Download_Start + round(gate_downloads[(j-1)*3+k,]$Time)
-  }
+
+# Compute End time for each of the three input transfers
+# Update Start time for second and third transfers
+# NEW: round with 2 decimal to have the "actual" transfer duration
+gate_downloads$Download_End <- 0
+for(j in 1:nrow(gate_downloads)){
+if(j %% 3 != 1)
+gate_downloads[j,]$Download_Start = gate_downloads[j-1,]$Download_End
+gate_downloads[j,]$Download_End = gate_downloads[j,]$Download_Start + gate_downloads[j,]$Time
 }
-
 gate_downloads$concurrency <- 1
 
-#remove 1s as latency
-gate_downloads$Download_Start <- gate_downloads$Download_Start + 1
-
-# divide each transfer into 50 intervals to estimate the nominal bandwidth (only for Gate downloads)
-n_interval <- 50
 for(i in 1:nrow(gate_downloads)){
-  conc <- vector(mode="numeric", length=n_interval)
-  step <- (gate_downloads[i,]$Download_End - gate_downloads[i,]$Download_Start )/n_interval
-  for(s in 1: n_interval){
-    conc[s] <- nrow(subset(gate_downloads, SE_SITE == gate_downloads[i,]$SE_SITE
-                                         &FileSize == gate_downloads[i,]$FileSize
-                                         &Download_Start <= (step*(s-1)+gate_downloads[i,]$Download_Start)
-                                         &Download_End >= (step*(s-1)+gate_downloads[i,]$Download_Start)))
+  # Get the begin and end time of this transfer. 
+  # Add 1 second (latency) to the start time
+  begin <- gate_downloads[i,]$Download_Start + 1
+  end <- gate_downloads[i,]$Download_End
+  
+  # Determine the number of intervals in which split the transfer time
+  # NEW: adapt the number to the duration. At least 1 interval and at most 50
+  # Transfers shorter than 5 seconds are split in 10 times their duration 
+  # Example: a transfer of 2 seconds will be split in 20 intervals
+  n_interval <- max(1,min(50,ceiling((10*(end-begin)))))
+  
+  # Set the length of each interval
+  step <- (end - begin) / n_interval
+  
+  # Get the set of concurrent transfers once for all. They have to begin 
+  # before the end  AND end after the beginning of the current transfer
+  others <- subset(gate_downloads, SE_SITE == gate_downloads[i,]$SE_SITE & 
+                     (Download_Start + 1) <= end & Download_End >= begin)
+  if (n_interval == 1){
+    # if there is only one interval to cover, we're done
+    gate_downloads[i,]$concurrency <- nrow(others)
+  } else {
+    cur_concurrency <- 0
+    if (nrow(others) > 1) {
+      # This makes sense only if there is concurrency
+      for(s in 1: n_interval){
+        # set the end of the current interval
+        end <- begin + step
+        # accumulate the inverse of the number of concurrent transfers over
+        # this interval
+        cur_concurrency <- cur_concurrency + 
+          1/(nrow(subset(others, (Download_Start +1) <= end & Download_End >= begin)))     
+        # update begin for the next round
+        begin <- end
+      }
+      # End of formula: N/sum_{i=1}^{N}(1/C_i)
+      gate_downloads[i,]$concurrency <- n_interval/cur_concurrency
+    }
   }
-
-  gate_downloads[i,]$concurrency <- n_interval/sum(1/conc)
 }
 
 # for merge download transfers, the concurrency is considered as 1
