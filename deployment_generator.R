@@ -10,6 +10,16 @@
 #### Required R packages
 library(XML)
 library(reshape2)
+
+# Utility function
+rewrite_hostname <-function(x){
+  name <- head(strsplit(as.character(x),"[.]")[[1]], n=1)
+  prefix <- gsub('[[:digit:]]+', '', name)
+  radical <- as.numeric(gsub('[[:alpha:]-]+', '', name))
+  suffix <- gsub(name,"",x)
+  paste(prefix,radical,suffix, sep="")
+}
+
 #### Parsing command line arguments
 args = commandArgs(trailingOnly=TRUE)
 if (length(args) < 1) {
@@ -53,6 +63,8 @@ inputSEs = inputSEs[inputSEs != defSE]
 # extract Gate job arguments from database and file transfers 
 start_and_compute_times = db_dump[c(1,7,10)]
 uploads_gate <- raw_transfers[raw_transfers$UpDown == 1 & raw_transfers$JobType == "gate", c(2,3,5,7)]
+uploads_gate$Source = sapply(uploads_gate$Source, rewrite_hostname)
+
 download_sources_gate <- raw_transfers[raw_transfers$UpDown == 2 & raw_transfers$JobType=="gate",c(2,3)]
 download_sources_gate$File<-rep(c("wrapper","distrib","input"))
 

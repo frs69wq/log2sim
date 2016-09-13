@@ -10,6 +10,16 @@
 #### Required R packages
 library(XML)
 library(plyr)
+
+# Utility function
+rewrite_hostname <-function(x){
+  name <- head(strsplit(as.character(x),"[.]")[[1]], n=1)
+  prefix <- gsub('[[:digit:]]+', '', name)
+  radical <- as.numeric(gsub('[[:alpha:]-]+', '', name))
+  suffix <- gsub(name,"",x)
+  paste(prefix,radical,suffix, sep="")
+}
+
 #### Parsing command line arguments
 args = commandArgs(trailingOnly=TRUE)
 if (length(args) < 1) {
@@ -35,7 +45,7 @@ if (initial == "initial"){
 #### Data preparation
 # Get information about worker nodes
 workers <- read.csv(paste(wd,'worker_nodes.csv', sep="/"), header=TRUE, sep=',', as.is=TRUE)
-
+workers$Name = sapply(workers$Name, rewrite_hostname)
 # Get information about file transfers 
 raw_transfers <- read.csv(paste(wd,'file_transfer.csv', sep="/"), header = TRUE, sep=',',as.is=TRUE)
 

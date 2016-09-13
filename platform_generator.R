@@ -11,6 +11,18 @@
 library(XML)
 library(plyr)
 library(stats)
+
+# utility functions
+get_hostname <- function(x) {
+  head(strsplit(as.character(x),"[.]")[[1]], n=1)
+}
+get_suffix <- function(x) {
+  gsub(get_hostname(x),"",x)
+}
+radical_merge <-function(x) {
+  paste(as.list(x), collapse=",")
+}
+
 #### Parsing command line arguments
 args = commandArgs(trailingOnly=TRUE)
 if (length(args) < 1) {
@@ -36,6 +48,21 @@ if (initial == "initial"){
 #### Data preparation
 # Get information about worker nodes
 workers <- read.csv(paste(wd,'worker_nodes.csv', sep="/"), header=TRUE, sep=',', as.is=TRUE)
+workers$Speed = round(as.numeric(gsub("Mf","", workers$MIPS)),-1)
+workers$NetSpeed = as.numeric(gsub("Mbps","", workers$NetSpeed))
+
+workers$hostname = sapply(workers$Name, get_hostname)
+workers$prefix =  gsub('[[:digit:]]+', '', workers$hostname)
+workers$radical = as.numeric(gsub('[[:alpha:]-]+', '', workers$hostname))
+workers$suffix = sapply(workers$Name, get_suffix)
+
+# summarize information about each cluster in a site
+cluster_info <- ddply(workers, .(prefix,suffix, Core, Speed, NetSpeed, SiteName, CloseSE), summarize, 
+                      radical_list=list(sort(radical)))
+cluster_info$radical= sapply(cluster_info$radical_list, radical_merge)
+cluster_info = subset(cluster_info, select=-c(radical_list))
+cluster_info$name = paste(cluster_info$prefix,"-", cluster_info$Core,"cores-at-",cluster_info$Speed,"MIPS",
+                          cluster_info$suffix,sep="")
 
 # Get information about file transfers 
 raw_transfers <- read.csv(paste(wd,'file_transfer.csv', sep="/"), header = TRUE, sep=',',as.is=TRUE)
@@ -56,12 +83,10 @@ transfers$SE_SITE <- paste(transfers$Source,'_',transfers$SiteName,sep='')
 sites <- unique(workers$SiteName)
 storage_elements <- unique(c(transfers[transfers$UpDown == 1,]$Destination, transfers[transfers$UpDown == 2,]$Source))
 
-
 # Also Identify if there exists some SE used only for upload-tests. If there is, they have to be described though in 
 # the platform file (with a minimum default bandwidth of 100kBps). 
 upload_test_se <- unique(raw_transfers[raw_transfers$UpDown == 0,]$Destination)
 upload_test_se <- upload_test_se[!upload_test_se %in% storage_elements]
-
 
 if (length(upload_test_se) > 0) {
   upload_test_only = raw_transfers[(raw_transfers$UpDown == 0 & raw_transfers$Destination %in% upload_test_se),]
@@ -81,16 +106,12 @@ if (length(unique(transfers[!transfers$Destination %in% local_ses & transfers$Up
   warning(paste("WARNING: Some SEs are used for upload without being declared as local.", workflow_name))
 }
 
-
-
 #### Computing concurrency and apply corrective factor####
 
-db <- read.csv(paste(wd,'db_dump.csv', sep="/"), header = TRUE, 
-                      sep=' ',as.is=TRUE)
+db <- read.csv(paste(wd,'db_dump.csv', sep="/"), header = TRUE, sep=' ',as.is=TRUE)
 gate_db <- subset(db, Command=="gate.sh",select=c(JobId, DownloadStartTime))
 gate_downloads <- subset(transfers, UpDown == 2& JobType == "gate")
 merge_downloads <- subset(transfers, UpDown == 2& JobType == "merge")
-
 
 gate_downloads$Download_End <- 0
 merge_downloads$Download_Start <- 0
@@ -99,15 +120,14 @@ merge_downloads$Download_End <- 0
 gate_downloads <- rename(merge(gate_downloads, gate_db, by=c("JobId")),
                   c("DownloadStartTime" = "Download_Start"))
 
-
 # Compute End time for each of the three input transfers
 # Update Start time for second and third transfers
 # NEW: round with 2 decimal to have the "actual" transfer duration
 gate_downloads$Download_End <- 0
 for(j in 1:nrow(gate_downloads)){
-if(j %% 3 != 1)
-gate_downloads[j,]$Download_Start = gate_downloads[j-1,]$Download_End
-gate_downloads[j,]$Download_End = gate_downloads[j,]$Download_Start + gate_downloads[j,]$Time
+  if(j %% 3 != 1)
+    gate_downloads[j,]$Download_Start = gate_downloads[j-1,]$Download_End
+    gate_downloads[j,]$Download_End = gate_downloads[j,]$Download_Start + gate_downloads[j,]$Time
 }
 gate_downloads$concurrency <- 1
 
@@ -159,9 +179,7 @@ merge_downloads$concurrency <- 1
 df_download <- rbind(gate_downloads, merge_downloads)
 df_download$Bandwidth_improved <- df_download$Bandwidth * df_download$concurrency
 
-
 ##############################
-
 # Compute the respective average bandwidth from (then to) these SE to (then from)each grid site. Let ddply produce NaN
 # entries. The rationale is that during the simulation the LFC can pick a SE for download input that was not selected 
 # during the real execution. To circumvent this, we add a default bandwidth for the missing connections. This value 
@@ -169,7 +187,6 @@ df_download$Bandwidth_improved <- df_download$Bandwidth * df_download$concurrenc
 
 SE_to_site_bandwidth = ddply(df_download, c("Source","SiteName"), summarize, 
                              AvgBandwidth=round(mean(Bandwidth),2), MaxBandwidth=max(Bandwidth_improved), .drop=FALSE)
-
 
 if (TRUE %in% is.nan(SE_to_site_bandwidth$AvgBandwidth)) {
   SE_to_site_bandwidth[is.nan(SE_to_site_bandwidth$AvgBandwidth),]$AvgBandwidth <- 
@@ -180,7 +197,6 @@ if (TRUE %in% is.infinite(SE_to_site_bandwidth$MaxBandwidth)) {
   SE_to_site_bandwidth[is.infinite(SE_to_site_bandwidth$MaxBandwidth),]$MaxBandwidth <- 
     max(transfers[transfers$UpDown==2,]$Bandwidth)
 }
-
 
 site_to_SE_bandwidth = ddply(transfers[transfers$UpDown != 2,], c("Destination","SiteName"),summarize, 
                              AvgBandwidth=round(mean(Bandwidth),2),MaxBandwidth=max(Bandwidth),.drop=FALSE)
@@ -232,23 +248,66 @@ for(n in 1:length(platform_out)){
       #     * a backbone
       #     * all the used worker nodes that belong to this site
 
-      t$addTag("AS", attrs=c(id=paste("AS",i, sep="_"), routing="Cluster"), close=FALSE)
-      t$addTag("router", attrs=c(id=paste("AS",i,"router", sep="_")))
-      t$addTag("backbone",attrs=c(id=paste(i,"backbone", sep="_"), bandwidth="100Gbps", latency="750us"))
-      
-      w = workers[workers$SiteName == i,]
-      for (j in 1:nrow(w)){
-        # Declaration of the host and its close SE
-        t$addTag("host", attrs=c(id=w[j,2], speed=w[j,4], core=w[j,3]), close=FALSE)
-        t$addTag("prop", attrs=c(id="closeSE", value=w[j,8]))
+#       t$addTag("AS", attrs=c(id=paste("AS",i, sep="_"), routing="Cluster"), close=FALSE)
+#       t$addTag("router", attrs=c(id=paste("AS",i,"router", sep="_")))
+#       t$addTag("backbone",attrs=c(id=paste(i,"backbone", sep="_"), bandwidth="100Gbps", latency="750us"))
+#
+#       w = workers[workers$SiteName == i,]
+#       for (j in 1:nrow(w)){
+#         # Declaration of the host and its close SE
+#         t$addTag("host", attrs=c(id=w[j,2], speed=w[j,4], core=w[j,3]), close=FALSE)
+#         t$addTag("prop", attrs=c(id="closeSE", value=w[j,8]))
+#         t$closeTag()
+#
+#         # Declaration of the full-duplex link that connects the host to the AS's backbone
+#         t$addTag("link", attrs=c(id=paste(w[j,2],"link",sep="_"), bandwidth=w[j,5], latency="500us",
+#                                  sharing_policy="FULLDUPLEX"))
+#         t$addTag("host_link", attrs=c(id=w[j,2], up=paste(w[j,2],"link_UP",sep="_"),
+#                                       down=paste(w[j,2], "link_DOWN", sep="_")))
+#       }
+#       t$closeTag()
+      t$addTag("AS", attrs=c(id=paste("AS",i, sep="_"), routing="Full"), close=FALSE)
+      clusters <- unique(cluster_info[cluster_info$SiteName == i,9]) #name
+      for (cluster_name in clusters){
+        cluster = cluster_info[cluster_info$name == cluster_name,]
+        t$addTag("cluster", attrs=c(id = cluster$name,
+                                    prefix=cluster$prefix, radical=cluster$radical, suffix=cluster$suffix,
+                                    speed=paste(cluster$Speed,"Mf", sep=""), core=cluster$Core,
+                                    bw=paste(cluster$NetSpeed,"Mbps", sep=""),
+                                    lat="500us", sharing_policy="FATPIPE",
+                                    limiter_link= paste(2*cluster$NetSpeed,"Mbps", sep="")),
+                 close=FALSE)
+        t$addTag("prop", attrs=c(id="closeSE", value=cluster$CloseSE))
         t$closeTag()
-        
-        # Declaration of the full-duplex link that connects the host to the AS's backbone
-        t$addTag("link", attrs=c(id=paste(w[j,2],"link",sep="_"), bandwidth=w[j,5], latency="500us", 
-                                 sharing_policy="FULLDUPLEX"))
-        t$addTag("host_link", attrs=c(id=w[j,2], up=paste(w[j,2],"link_UP",sep="_"), 
-                                      down=paste(w[j,2], "link_DOWN", sep="_")))  
-      }  
+      }
+      t$addTag("AS",  attrs=c(id=paste("AS",i,"gw", sep="_"), routing="Full"), close=FALSE)
+      t$addTag("router", attrs=c(id=paste("AS",i,"router", sep="_")))
+      t$closeTag()
+      t$addTag("link",attrs=c(id=paste(i,"backbone", sep="_"), bandwidth="100Gbps", latency="750us"))
+      
+      for (cluster_name in clusters){
+        cluster = cluster_info[cluster_info$name == cluster_name,]
+        t$addTag("ASroute", attrs=c(src=cluster$name, dst=paste("AS",i, "gw", sep="_"),
+                                    gw_src=paste(cluster$prefix,cluster$name,"_router", cluster$suffix, sep=""), 
+                                    gw_dst=paste("AS",i,"router", sep="_")), close=FALSE)
+        t$addTag("link_ctn", attrs=c(id=paste(i,"backbone", sep="_")))
+        t$closeTag()
+      }
+      if (length(clusters) > 1){
+        for (src_idx in 1:(length(clusters)-1)){
+          src = cluster_info[cluster_info$name ==  clusters[src_idx],]
+          for (dst_idx in (src_idx+1):length(clusters)){
+            dst = cluster_info[cluster_info$name == clusters[dst_idx],]
+
+            t$addTag("ASroute", attrs=c(src=src$name, dst=dst$name,
+                                        gw_src=paste(src$prefix,src$name,"_router", src$suffix, sep=""),
+                                        gw_dst=paste(dst$prefix,dst$name,"_router", dst$suffix, sep="")),
+                     close=FALSE)
+            t$addTag("link_ctn", attrs=c(id=paste(i,"backbone", sep="_")))
+            t$closeTag()
+          }
+        }
+      }
       t$closeTag()
     }
 
