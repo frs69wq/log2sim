@@ -293,21 +293,6 @@ for(n in 1:length(platform_out)){
         t$addTag("link_ctn", attrs=c(id=paste(i,"backbone", sep="_")))
         t$closeTag()
       }
-      if (length(clusters) > 1){
-        for (src_idx in 1:(length(clusters)-1)){
-          src = cluster_info[cluster_info$name ==  clusters[src_idx],]
-          for (dst_idx in (src_idx+1):length(clusters)){
-            dst = cluster_info[cluster_info$name == clusters[dst_idx],]
-
-            t$addTag("ASroute", attrs=c(src=src$name, dst=dst$name,
-                                        gw_src=paste(src$prefix,src$name,"_router", src$suffix, sep=""),
-                                        gw_dst=paste(dst$prefix,dst$name,"_router", dst$suffix, sep="")),
-                     close=FALSE)
-            t$addTag("link_ctn", attrs=c(id=paste(i,"backbone", sep="_")))
-            t$closeTag()
-          }
-        }
-      }
       t$closeTag()
     }
 
