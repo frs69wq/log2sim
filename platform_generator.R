@@ -220,26 +220,31 @@ for(n in 1:length(platform_out)){
     t$addTag("AS", attrs=c(id=workflow_name, routing="Full"), close=FALSE)
 
     # Definition of a first AS called 'Services' that comprises
-    #     * a router
-    #     * a backbone
     #     * the master server 'vip.creatis.insa-lyon.fr'
     #     * the logical file catalog 'lfc-biomed.in2p3.fr'
+    #     * a router
+    #     * some links and routes to connect these service nodes to the outside world
 
-    t$addTag("AS", attrs=c(id="Services", routing="Cluster"), close=FALSE)
-    t$addTag("router", attrs=c(id="Services_router"))
-    t$addTag("backbone",attrs=c(id="Services_backbone", bandwidth="100Gbps", latency="750us"))
-
+    t$addTag("AS", attrs=c(id="Services", routing="Full"), close=FALSE)
     t$addTag("host", attrs=c(id="vip.creatis.insa-lyon.fr", speed="5Gf",core="48"))
-    t$addTag("link", attrs=c(id="vip.creatis.insa-lyon.fr_link", bandwidth="10Gbps", latency="500us",
-                             sharing_policy="FULLDUPLEX"))
-    t$addTag("host_link", attrs=c(id="vip.creatis.insa-lyon.fr", up="vip.creatis.insa-lyon.fr_link_UP",
-                                  down="vip.creatis.insa-lyon.fr_link_DOWN"))
-      
     t$addTag("host", attrs=c(id="lfc-biomed.in2p3.fr", speed="5Gf", core="48"))
-    t$addTag("link", attrs=c(id="lfc-biomed.in2p3.fr_link", bandwidth="10Gbps", latency="500us", 
-                             sharing_policy="FULLDUPLEX"))
-    t$addTag("host_link", attrs=c(id="lfc-biomed.in2p3.fr", up="lfc-biomed.in2p3.fr_link_UP",
-                                  down="lfc-biomed.in2p3.fr_link_DOWN"))
+
+    t$addTag("router", attrs=c(id="Services_router"))
+
+    t$addTag("link",attrs=c(id="Services_backbone", bandwidth="100Gbps", latency="750us"))
+    t$addTag("link", attrs=c(id="vip.creatis.insa-lyon.fr_link", bandwidth="10Gbps", latency="500us"))
+    t$addTag("link", attrs=c(id="lfc-biomed.in2p3.fr_link", bandwidth="10Gbps", latency="500us"))
+
+    t$addTag("route", attrs=c(src="vip.creatis.insa-lyon.fr", dst="Services_router"), close=FALSE)
+    t$addTag("link_ctn", attrs=c(id="vip.creatis.insa-lyon.fr_link"))
+    t$addTag("link_ctn", attrs=c(id="Services_backbone"))
+    t$closeTag()
+
+    t$addTag("route", attrs=c(src="lfc-biomed.in2p3.fr", dst="Services_router"), close=FALSE)
+    t$addTag("link_ctn", attrs=c(id="lfc-biomed.in2p3.fr_link"))
+    t$addTag("link_ctn", attrs=c(id="Services_backbone"))
+    t$closeTag()
+
     t$closeTag()
 
     for (i in sites){
@@ -248,24 +253,6 @@ for(n in 1:length(platform_out)){
       #     * a backbone
       #     * all the used worker nodes that belong to this site
 
-#       t$addTag("AS", attrs=c(id=paste("AS",i, sep="_"), routing="Cluster"), close=FALSE)
-#       t$addTag("router", attrs=c(id=paste("AS",i,"router", sep="_")))
-#       t$addTag("backbone",attrs=c(id=paste(i,"backbone", sep="_"), bandwidth="100Gbps", latency="750us"))
-#
-#       w = workers[workers$SiteName == i,]
-#       for (j in 1:nrow(w)){
-#         # Declaration of the host and its close SE
-#         t$addTag("host", attrs=c(id=w[j,2], speed=w[j,4], core=w[j,3]), close=FALSE)
-#         t$addTag("prop", attrs=c(id="closeSE", value=w[j,8]))
-#         t$closeTag()
-#
-#         # Declaration of the full-duplex link that connects the host to the AS's backbone
-#         t$addTag("link", attrs=c(id=paste(w[j,2],"link",sep="_"), bandwidth=w[j,5], latency="500us",
-#                                  sharing_policy="FULLDUPLEX"))
-#         t$addTag("host_link", attrs=c(id=w[j,2], up=paste(w[j,2],"link_UP",sep="_"),
-#                                       down=paste(w[j,2], "link_DOWN", sep="_")))
-#       }
-#       t$closeTag()
       t$addTag("AS", attrs=c(id=paste("AS",i, sep="_"), routing="Full"), close=FALSE)
       clusters <- unique(cluster_info[cluster_info$SiteName == i,9]) #name
       for (cluster_name in clusters){
