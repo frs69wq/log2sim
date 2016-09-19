@@ -79,6 +79,7 @@ download_sources_merge$File<-c("wrapper","input")
 sources_by_merge_job = reshape(download_sources_merge, timevar = "File", idvar="JobId", direction = "wide")
 
 merge_arguments <- merge(merge(uploads_merge, start_and_compute_times), sources_by_merge_job)
+merge_arguments$Source = sapply(merge_arguments$Source, rewrite_hostname)
 
 #### Generation of the XML tree
 # Creation and header
