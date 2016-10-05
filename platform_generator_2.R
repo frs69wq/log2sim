@@ -48,6 +48,8 @@ get_worker_nodes <- function(file_name){
   df <- split_and_rewrite_hostname(df)
   df$MIPS = round(as.numeric(gsub("Mf","", df$MIPS)),-1)
   df$NetSpeed = as.numeric(gsub("Mbps","", df$NetSpeed))
+  
+  df$ClusterName = paste0(df$prefix,"-", df$Core,"cores-at-",df$MIPS,"MIPS",df$suffix)
   df
 }
 
@@ -132,6 +134,20 @@ get_transfers <- function(file_name){
   df$Link <- apply(df[,c(2:3,7:8)], 1, 
                    function(x) if (x[4]==2) paste0(x[1],'-',x[3]) else paste0(x[3],'-',x[2]))
   
+  
+  # Construct the cluster name
+  df$Cluster <- apply(df[,c(2:3,8)],1,
+                     function(x) if (x[3]==2)  workers[workers$hostname == strsplit(x[2],"[.]")[[1]][1],]$ClusterName 
+                                 else          workers[workers$hostname == strsplit(x[1],"[.]")[[1]][1],]$ClusterName) 
+  
+  
+  # Construct the internal link name:
+  # if UpDown == 2 (Download), its Source_SiteName_Cluster
+  # Otherwise (Upload-test or Upload), it's Cluster_SiteName_Destination
+  df$ClusterLink <- apply(df[,c(2:3,7:8,12)], 1, 
+                   function(x) if (x[4]==2) paste0(x[1],'-',x[3],'-',x[5]) else paste0(x[5],'-',x[3],'-',x[2]))
+  
+
   df <- merge(df, get_job_start_times(paste0(wd,'db_dump.csv')), by=c("JobId"))
   df <- update_start_end_times(df)
   df <- set_file_types(df)
@@ -201,6 +217,18 @@ get_bandwidths_by_link <- function(df){
   rbind(release,others)
 }
 
+get_bandwidths_by_clusterlink <- function(df){
+  df <- ddply(transfers, c("ClusterLink","File_Type"), summarize, count=length(ClusterLink), 
+              Avg=round(mean(Bandwidth_in_bps)), Max=round(max(Bandwidth_in_bps)), 
+              Corr_Avg=round(mean(Corr_Bandwidth_in_bps)),
+              Corr_Max=round(max(Corr_Bandwidth_in_bps)), 
+              Mock_1G=1e9, Mock_10G=1e10)
+  release <- subset(df, File_Type == 'Release')
+  others <- ddply(subset(df, !(ClusterLink %in% release$ClusterLink)), .(ClusterLink), function(x) x[which.max(x$Max),])
+  rbind(release,others)
+}
+
+
 select_routes <- function(Sites, SEs){
   site_to_SE <- merge(Sites, SEs)
   names(site_to_SE) <- c("src", "dst")
@@ -227,6 +255,7 @@ select_routes <- function(Sites, SEs){
   
   rbind(site_to_SE, SE_to_site)
 }
+
 ############################### Generation of the different parts of an XML file #######################
 Service_AS <- function(){
   AS     <- newXMLNode("AS", attrs=c(id="Services", routing="Full"))
@@ -341,10 +370,23 @@ local_ses         <- unique(workers$CloseSE)
 clusters          <- build_clusters(workers)
 transfers         <- get_transfers(paste0(wd,'file_transfer.csv'))
 transfers         <- correct_bandwidth(transfers)
+
 bandwidth_by_link <- get_bandwidths_by_link(transfers)
+bandwidth_by_clusterlink <- get_bandwidths_by_clusterlink(transfers)
+
+variance_by_site_se <-  ddply(transfers, c("Link","File_Type"), summarize, count=length(Link), 
+                                  Variance = sd(Time), .drop =TRUE)
+
+
+variance_by_cluster_site <-  ddply(transfers, c("Cluster","SiteName","File_Type"), summarize, count=length(Cluster), 
+                              Variance = sd(Time), .drop =TRUE)
+
+
+
 storage_elements  <- unique(c(transfers[transfers$UpDown != 2,]$Destination, 
                               transfers[transfers$UpDown == 2,]$Source))
 routes            <- select_routes(sites, storage_elements)
+
 ############################### Produce all the components of the XML files ############################
 service_AS <- Service_AS()
 all_site_ASes_with_limiters <- dlply(clusters, .(SiteName), Site_AS_with_limiters)
