@@ -47,9 +47,11 @@ get_worker_nodes <- function(file_name){
   df <- subset(read.csv(file_name, header=TRUE, sep=',', as.is=TRUE), select=-c(Timestamp, Country))
   df <- split_and_rewrite_hostname(df)
   df$MIPS = round(as.numeric(gsub("Mf","", df$MIPS)),-1)
-  df$NetSpeed = as.numeric(gsub("Mbps","", df$NetSpeed))
-  
   df$ClusterName = paste0(df$prefix,"-", df$Core,"cores-at-",df$MIPS,"MIPS",df$suffix)
+
+  df$NetSpeed = sapply(df$NetSpeed, function (x) 
+    if (grepl("Gbps", x)) as.numeric(gsub("Gbps","000", x))
+    else as.numeric(gsub("Mbps","", x)))
   df
 }
 
