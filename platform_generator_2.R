@@ -376,14 +376,6 @@ transfers         <- correct_bandwidth(transfers)
 bandwidth_by_link <- get_bandwidths_by_link(transfers)
 bandwidth_by_clusterlink <- get_bandwidths_by_clusterlink(transfers)
 
-variance_by_site_se <-  ddply(transfers, c("Link","File_Type"), summarize, count=length(Link), 
-                                  Variance = sd(Time), .drop =TRUE)
-
-
-variance_by_cluster_site <-  ddply(transfers, c("Cluster","SiteName","File_Type"), summarize, count=length(Cluster), 
-                              Variance = sd(Time), .drop =TRUE)
-
-
 
 storage_elements  <- unique(c(transfers[transfers$UpDown != 2,]$Destination, 
                               transfers[transfers$UpDown == 2,]$Source))
