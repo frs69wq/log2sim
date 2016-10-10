@@ -77,6 +77,8 @@ echo -e 'verbose=${2:-""}\n'\
         '\tverbose="'"--log=jmsg.thres:critical"'"\n'\
         'fi\n' >> $output
 
+
+echo -e 'flag="--cfg=network/crosstraffic:0"'>> $output
 # Order of argument: Platform Deployment TotalParticleNumber NmuberOfGateJob SOSTime NumberOfMergeJob cpuMergeTime eventsPerSec LogFile
 
 echo 'cmd="java -cp ${VIPSIM}/bin:${SIMGRID_PATH}/simgrid.jar \
@@ -94,10 +96,11 @@ then
   do
       echo -e "\\tSimulate on AS  - version ${version}" 
       platform_file="simgrid_files/platform_'${workflow_dir}'_${platform}_${platform_type}.xml"
-      run=$cmd" ${platform_file} simgrid_files/'${deployment_file2}' '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose}"
+      run=$cmd" ${platform_file} simgrid_files/'${deployment_file2}' '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose} ${flag}"
       echo -e "\\t\\t$run"
       $run  1> timings/simulated_time_on_${platform}_${platform_type}_v${version}.csv \
             2> csv_files/simulated_file_transfer_on_${platform}_${platform_type}_v${version}.csv
+      sed -i '1d' csv_files/simulated_file_transfer_on_${platform}_${platform_type}_v${version}.csv        
   done   
 fi' >> $output
 
@@ -108,10 +111,11 @@ then
   do
       echo -e "\\tSimulate on AS  - version ${version}" 
       platform_file="simgrid_files/platform_'${workflow_dir}'_${platform}_${platform_type}.xml"
-      run=$cmd" ${platform_file} simgrid_files/'${deployment_file2}' '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose}"
+      run=$cmd" ${platform_file} simgrid_files/'${deployment_file2}' '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose} ${flag}"
       echo -e "\\t\\t$run"
       $run  1> timings/simulated_time_on_${platform}_${platform_type}_v${version}.csv \
             2> csv_files/simulated_file_transfer_on_${platform}_${platform_type}_v${version}.csv
+      sed -i '1d' csv_files/simulated_file_transfer_on_${platform}_${platform_type}_v${version}.csv        
   done   
 fi' >> $output
 
