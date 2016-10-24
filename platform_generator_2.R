@@ -536,7 +536,7 @@ export_single_AS_XML <- function (METHOD, SYM){
               dtd='platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd"')
   t$addNode("AS", attrs=c(id=workflow_name, routing="Cluster"), 
             .children = c(Service_nodes_in_single_AS(), apply(workers, 1, Worker_in_single_AS), 
-                          apply(bandwidth_by_SE, 1, function(x) SEs_in_single_AS(x,METHOD, "SYM")),
+                          apply(bandwidth_by_SE, 1, function(x) SEs_in_single_AS(x,METHOD, SYM)),
                           Routing_in_single_AS()))
   cat(saveXML(t), file=paste0(output_dir,"single_AS_",workflow_name,"_",METHOD,"_",SYM,".xml"))
 }  
