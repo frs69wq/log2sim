@@ -235,7 +235,6 @@ get_bandwidths_by_SE <- function(Transfers){
 get_bandwidths_by_link <- function(Transfers){
   df <- ddply(Transfers, c("Link","File_Type"), summarize, count=length(Link),
               Avg=round(mean(Bandwidth_in_bps)), Max=round(max(Bandwidth_in_bps)), 
-              Corr_Avg=round(mean(Corr_Bandwidth_in_bps)),
               Corr_Max=round(max(Corr_Bandwidth_in_bps)), 
               Mock_1G=1e9, Mock_10G=1e10)
   release <- subset(df, File_Type == 'Release')
@@ -246,7 +245,6 @@ get_bandwidths_by_link <- function(Transfers){
 get_bandwidths_by_clusterlink <- function(Transfers){
   df <- ddply(Transfers, c("ClusterLink","File_Type"), summarize, count=length(ClusterLink),
               Avg=round(mean(Bandwidth_in_bps)), Max=round(max(Bandwidth_in_bps)), 
-              Corr_Avg=round(mean(Corr_Bandwidth_by_cluster_in_bps)),
               Corr_Max=round(max(Corr_Bandwidth_by_cluster_in_bps)),
               Mock_1G=1e9, Mock_10G=1e10, Link=unique(Link))
   release <- subset(df, File_Type == 'Release')
@@ -563,12 +561,11 @@ all_SEs <- lapply(storage_elements, SE_AS)
 Service_link          <- newXMLNode("link", attrs=c(id="service_link", bandwidth="10Gbps", latency="500us"))
 Avg_links             <- apply(bandwidth_by_link[,c(1,4)], 1, Fatpipe_link)
 Max_links             <- apply(bandwidth_by_link[,c(1,5)], 1, Shared_link)
-Corr_Avg_links        <- apply(bandwidth_by_link[,c(1,6)], 1, Shared_link)
-Corr_Max_links        <- apply(bandwidth_by_link[,c(1,7)], 1, Shared_link)
-Mock_1G_links         <- apply(bandwidth_by_link[,c(1,8)], 1, Shared_link)
-Mock_10G_links        <- apply(bandwidth_by_link[,c(1,9)], 1, Shared_link)
-Agg_Corr_Max_link     <- apply(bandwidth_by_link[,c(1,10)], 1, Shared_link)
-Cluster_Corr_Max_link <- apply(bandwidth_by_clusterlink[,c(1,7)], 1, Intra_link)
+Corr_Max_links        <- apply(bandwidth_by_link[,c(1,6)], 1, Shared_link)
+Mock_1G_links         <- apply(bandwidth_by_link[,c(1,7)], 1, Shared_link)
+Mock_10G_links        <- apply(bandwidth_by_link[,c(1,8)], 1, Shared_link)
+Agg_Corr_Max_link     <- apply(bandwidth_by_link[,c(1,9)], 1, Shared_link)
+Cluster_Corr_Max_link <- apply(bandwidth_by_clusterlink[,c(1,6)], 1, Intra_link)
 
 Services_to_site_routes <- lapply(sites, Services_to_site)
 Services_to_SE_routes <- lapply(storage_elements, Services_to_SE)
@@ -588,9 +585,6 @@ export_XML(all_site_ASes_with_limiters, Avg_links, "Avg_lim")
 
 export_XML(all_site_ASes_without_limiters, Max_links, "Max_no_lim")
 export_XML(all_site_ASes_with_limiters, Max_links, "Max_lim")
-
-export_XML(all_site_ASes_without_limiters, Corr_Avg_links, "Corr_Avg_no_lim")
-export_XML(all_site_ASes_with_limiters, Corr_Avg_links, "Corr_Avg_lim")
 
 export_XML(all_site_ASes_without_limiters, Corr_Max_links, "Corr_Max_no_lim")
 export_XML(all_site_ASes_with_limiters, Corr_Max_links, "Corr_Max_lim")
