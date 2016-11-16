@@ -444,7 +444,7 @@ Site_AS_with_cluster_links <- function(df){
   clusters   <- apply(df, 1, function(c)
     newXMLNode("cluster", attrs=c(id=as.character(c[1]), c[2], c[9], c[3], speed=paste0(c[5],"Mf"),
                                   core=as.character(c[4]),
-                                  bw=paste0(c[5],"Mbps"), lat="500us", sharing_policy="FATPIPE",
+                                  bw=paste0(c[6],"Mbps"), lat="500us", sharing_policy="FATPIPE",
                                   limiter_link= paste0(2*as.numeric(c[6]),"Mbps"),
                                   router_id=paste0(as.character(c[1]), "_router")),
                newXMLNode("prop", attrs=c(id="closeSE", value=as.character(c[8])))))
