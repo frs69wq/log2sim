@@ -218,6 +218,11 @@ correct_bandwidth <-function(df){
   df$Corr_Bandwidth_by_cluster <- df$Bandwidth_in_bps* df$concurrency_by_cluster
   df
 }
+################################################## Bandwidth aggregation ###############################################
+get_bandwidths_by_Site <- function(Transfers){
+  subset(ddply(Transfers, c("SiteName", "File_Type"), summarize,
+               Avg=round(mean(Bandwidth_in_bps)), Max=round(max(Bandwidth_in_bps))), File_Type == 'Release')
+}
 
 get_bandwidths_by_SE <- function(Transfers){
   to_SE <- ddply(Transfers[Transfers$UpDown != 2,], c("Destination"), summarize,
@@ -274,7 +279,7 @@ get_bandwidths_by_cluster <- function(Transfers){
   others <- ddply(subset(df, !(Cluster %in% release$Cluster)), .(Cluster), function(x) x[which.max(x$Max),])
   rbind(release,others)
 }
-
+################################################## Route selection #####################################################
 select_shared_routes <- function(Sites, SEs){
   df <- merge(SEs, Sites)
   names(df) <- c("src", "dst")
@@ -532,6 +537,7 @@ clusters          <- build_clusters(workers)
 transfers         <- get_transfers(paste0(wd,'file_transfer.csv'))
 transfers         <- correct_bandwidth(transfers)
 
+bandiwidth_by_Site       <- get_bandwidths_by_Site(transfers)
 bandwidth_by_SE          <- get_bandwidths_by_SE(transfers)
 bandwidth_by_SE_and_type <- get_bandwidths_by_SE_and_type(transfers)
 bandwidth_by_link        <- get_bandwidths_by_link(transfers)
