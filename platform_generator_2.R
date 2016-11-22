@@ -126,7 +126,7 @@ get_transfers <- function(file_name){
   df$Time <- round(df$Time/1000,2)
   # Compute the observed bandwidth for each individual file transfer
   # remove 1 sec from the transfer time (dispatched as network/control latency)
-  df$Bandwidth_in_bps  <- (8*df$FileSize)/pmax(0.001,(df$Time-1))
+  df$Bandwidth  <- (8*df$FileSize)/pmax(0.001,(df$Time-1))
 
   # Construct the link name:
   # if UpDown == 2 (Download), its Source_SiteName
@@ -213,23 +213,23 @@ correct_bandwidth <-function(df){
       }
     }
   }
-  df$Corr_Bandwidth_in_bps <- df$Bandwidth_in_bps* df$concurrency_on_link
-  df$Corr_Bandwidth_by_cluster_in_bps <- df$Bandwidth_in_bps* df$concurrency_on_cluster_link
-  df$Corr_Bandwidth_by_cluster <- df$Bandwidth_in_bps* df$concurrency_by_cluster
+  df$Corr_Bandwidth <- df$Bandwidth* df$concurrency_on_link
+  df$Corr_Bandwidth_by_cluster <- df$Bandwidth* df$concurrency_on_cluster_link
+  df$Corr_Bandwidth_by_cluster <- df$Bandwidth* df$concurrency_by_cluster
   df
 }
 ################################################## Bandwidth aggregation ###############################################
 get_bandwidths_by_Site <- function(Transfers){
   subset(ddply(Transfers, c("SiteName", "File_Type"), summarize,
-               Avg=round(mean(Bandwidth_in_bps)), Max=round(max(Bandwidth_in_bps))), File_Type == 'Release')
+               Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth))), File_Type == 'Release')
 }
 
 get_bandwidths_by_SE <- function(Transfers){
   to_SE <- ddply(Transfers[Transfers$UpDown != 2,], c("Destination"), summarize,
-              Avg=round(mean(Bandwidth_in_bps)), Max=round(max(Bandwidth_in_bps)))
+              Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)))
   names(to_SE) = c("SE","Avg_to","Max_to")
   from_SE <- ddply(Transfers[Transfers$UpDown == 2,], c("Source"), summarize,
-                   Avg=round(mean(Bandwidth_in_bps)), Max=round(max(Bandwidth_in_bps)))
+                   Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)))
   names(from_SE) = c("SE","Avg_from","Max_from")
   df <- merge(to_SE, from_SE, all=TRUE)
   df$Avg <- apply(df[,c(2,4)], 1, function(s) if (is.na(s[1])) s[2] else if (is.na(s[2])) s[1] else (s[1]+s[2])/2)
@@ -240,13 +240,13 @@ get_bandwidths_by_SE <- function(Transfers){
 
 get_bandwidths_by_SE_and_type <- function(Transfers){
   to_SE <- ddply(Transfers[Transfers$UpDown != 2,], c("Destination", "File_Type"), summarize,
-                 Avg=round(mean(Bandwidth_in_bps)), Max=round(max(Bandwidth_in_bps)))
+                 Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)))
   names(to_SE) = c("SE","File_Type","Avg_to","Max_to")
   upload <- subset(to_SE, File_Type == 'Partial Upload')
   others <- ddply(subset(to_SE, !(SE %in% upload$SE)), .(SE), function(x) x[which.max(x$Max_to),])
   to_SE <- rbind(upload,others)
   from_SE <- ddply(Transfers[Transfers$UpDown == 2,], c("Source","File_Type"), summarize,
-                   Avg=round(mean(Bandwidth_in_bps)), Max=round(max(Bandwidth_in_bps)))
+                   Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)))
   names(from_SE) = c("SE","File_Type","Avg_from","Max_from")
   release <- subset(from_SE, File_Type == c('Release'))
   others <- ddply(subset(from_SE, !(SE %in% release$SE)), .(SE), function(x) x[which.max(x$Max_from),])
@@ -255,8 +255,8 @@ get_bandwidths_by_SE_and_type <- function(Transfers){
 }
 
 get_bandwidths_by_link <- function(Transfers){
-  df <- ddply(Transfers, c("Link","File_Type"), summarize, count=length(Link), Avg=round(mean(Bandwidth_in_bps)),
-              Max=round(max(Bandwidth_in_bps)),Corr_Max=round(max(Corr_Bandwidth_in_bps)), Mock_1G=1e9, Mock_10G=1e10)
+  df <- ddply(Transfers, c("Link","File_Type"), summarize, count=length(Link), Avg=round(mean(Bandwidth)),
+              Max=round(max(Bandwidth)),Corr_Max=round(max(Corr_Bandwidth)), Mock_1G=1e9, Mock_10G=1e10)
   release <- subset(df, File_Type == 'Release')
   others <- ddply(subset(df, !(Link %in% release$Link)), .(Link), function(x) x[which.max(x$Max),])
   rbind(release,others)
@@ -264,8 +264,8 @@ get_bandwidths_by_link <- function(Transfers){
 
 get_bandwidths_by_clusterlink <- function(Transfers){
   df <- ddply(Transfers, c("ClusterLink","File_Type"), summarize, count=length(ClusterLink),
-              Avg=round(mean(Bandwidth_in_bps)), Max=round(max(Bandwidth_in_bps)),
-              Corr_Max=round(max(Corr_Bandwidth_by_cluster_in_bps)), Mock_1G=1e9, Mock_10G=1e10, Link=unique(Link))
+              Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)),
+              Corr_Max=round(max(Corr_Bandwidth_by_cluster)), Mock_1G=1e9, Mock_10G=1e10, Link=unique(Link))
   release <- subset(df, File_Type == 'Release')
   others <- ddply(subset(df, !(ClusterLink %in% release$ClusterLink)), .(ClusterLink), function(x) x[which.max(x$Max),])
   rbind(release,others)
@@ -273,7 +273,7 @@ get_bandwidths_by_clusterlink <- function(Transfers){
 
 get_bandwidths_by_cluster <- function(Transfers){
   df <- ddply(Transfers, c("Cluster","File_Type"), summarize, count=length(Cluster),
-              Avg=round(mean(Bandwidth_in_bps)), Max=round(max(Bandwidth_in_bps)),
+              Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)),
               Corr_Max=round(max(Corr_Bandwidth_by_cluster)))
   release <- subset(df, File_Type == 'Release')
   others <- ddply(subset(df, !(Cluster %in% release$Cluster)), .(Cluster), function(x) x[which.max(x$Max),])
