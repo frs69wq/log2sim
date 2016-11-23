@@ -117,9 +117,6 @@ $cmd
 cmd="./platform_generator.R ${workflow_dir} initial"
 info "\t$cmd"
 $cmd
-cmd="./mock_platform_generator.R ${workflow_dir} initial"
-info "\t$cmd"
-$cmd
 info "\tPlatform files: AS_[Avg_Fatpipe/Max_Shared]_platform_${workflow_dir}.xml
  mock_platform_${workflow_dir}.xml ... created."
 
@@ -149,8 +146,7 @@ Directory organization:
 To partially regenerate some files do:
 \t../../scripts/deployment_generator.R ${workflow_dir}
 \t../../scripts/platform_generator.R ${workflow_dir}
-\t../../scripts/launcher_generator.sh ${workflow_dir}
-\t../../scripts/mock_platform_generator.R ${workflow_dir}\n" > \
+\t../../scripts/launcher_generator.sh ${workflow_dir}\n" > \
 README
 
 ##############################################################################
