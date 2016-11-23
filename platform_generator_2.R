@@ -233,8 +233,10 @@ correct_bandwidth <-function(df){
 }
 ################################################## Bandwidth aggregation methods #######################################
 get_bandwidths_by_Site <- function(Transfers){
-  subset(ddply(Transfers, c("SiteName", "File_Type"), summarize, Max=round(max(Bandwidth)),
-               Corr_Max=round(max(Corr_Bandwidth_by_Site))), File_Type == 'Release', select=c("SiteName", "Max"))
+  subset(ddply(Transfers, c("SiteName", "File_Type"), summarize, Default="100Gbps",
+               Max=paste0(round(max(Bandwidth)/.97),"bps"),
+               Corr_Max=paste0(round(max(Corr_Bandwidth_by_Site)/.97),"bps")),
+         File_Type == 'Release', select=c("SiteName", "Default", "Max", "Corr_Max"))
 }
 
 get_bandwidths_by_SE <- function(Transfers){
@@ -271,7 +273,7 @@ get_bandwidths_by_SE_and_type <- function(Transfers){
 
 get_bandwidths_by_Link <- function(Transfers){
   df <- ddply(Transfers, c("Link","File_Type"), summarize, count=length(Link), Avg=round(mean(Bandwidth)),
-              Max=round(max(Bandwidth)),Corr_Max=round(max(Corr_Bandwidth_by_Link)), Mock_1G=1e9, Mock_10G=1e10)
+              Max=round(max(Bandwidth)),Corr_Max=round(max(Corr_Bandwidth_by_Link)))
   release <- subset(df, File_Type == 'Release')
   others <- ddply(subset(df, !(Link %in% release$Link)), .(Link), function(x) x[which.max(x$Max),])
   rbind(release,others)
@@ -423,7 +425,7 @@ SE_AS <-function(name){
              newXMLNode("host", attrs=c(id=name, speed="5Gf", core="48")))
 }
 
-Site_AS <- function(df){
+Site_AS <- function(df, bb_bw){
   site_name = unique(df$SiteName)
   AS         <- newXMLNode("AS", attrs=c(id=paste0("AS_", site_name), routing="Full"))
   clusters   <- apply(df, 1, function(c)
@@ -435,8 +437,9 @@ Site_AS <- function(df){
                newXMLNode("prop", attrs=c(id="closeSE", value=as.character(c[7])))))
   router_AS  <- newXMLNode("AS",  attrs=c(id=paste("AS",site_name,"gw", sep="_"), routing="Full"),
                            newXMLNode("router", attrs=c(id=paste("AS",site_name,"router", sep="_"))))
-  backbone   <- newXMLNode("link",attrs=c(id=paste(site_name,"backbone", sep="_"),
-                                          bandwidth="100Gbps", latency="750us"))
+  backbone <- newXMLNode("link",attrs=c(id=paste(site_name,"backbone", sep="_"),
+                                        bandwidth=bandwidth_by_Site[bandwidth_by_Site$SiteName==site_name,bb_bw],
+                                        latency="750us"))
   routes     <-  apply(df, 1, function(c)
     newXMLNode("ASroute", attrs=c(src=as.character(c[9]), dst=paste("AS",site_name, "gw", sep="_"),
                                   gw_src=paste0(as.character(c[9]), "_router"),
@@ -446,15 +449,15 @@ Site_AS <- function(df){
 }
 
 Intra_link <- function(x){
-  newXMLNode("link", attrs= c(id=as.character(x[1]), bandwidth=paste0(as.numeric(x[2]),"bps"), latency="750us"))
+  newXMLNode("link", attrs= c(id=as.character(x[1]), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"), latency="750us"))
 }
 
 Shared_link <- function(x){
-  newXMLNode("link", attrs= c(id=as.character(x[1]), bandwidth=paste0(as.numeric(x[2]),"bps"), latency="500us"))
+  newXMLNode("link", attrs= c(id=as.character(x[1]), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"), latency="500us"))
 }
 
 Fatpipe_link <- function(x){
-  newXMLNode("link", attrs= c(id=as.character(x[1]), bandwidth=paste0(as.numeric(x[2]),"bps"),
+  newXMLNode("link", attrs= c(id=as.character(x[1]), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
                               latency="500us",sharing_policy="FATPIPE"))
 }
 
@@ -570,7 +573,10 @@ bypass_routes      <- ddply(clusters, .(SiteName), select_bypass_routes)
 ################################################## Produce all the components of the XML files #########################
 service_AS <- Service_AS()
 
-all_site_ASes <- dlply(clusters, .(SiteName), Site_AS)
+all_site_ASes              <- dlply(clusters, .(SiteName), function(x) Site_AS(x,2))
+all_site_ASes_max_lim      <- dlply(clusters, .(SiteName), function(x) Site_AS(x,3))
+all_site_ASes_corr_max_lim <- dlply(clusters, .(SiteName), function(x) Site_AS(x,4))
+
 #all_site_ASes_with_cluster_links <- dlply(merge(clusters, bandwidth_by_cluster, by.x="name", by.y="Cluster"),
 #                                          .(SiteName), Site_AS_with_cluster_links)
 all_SEs <- lapply(storage_elements, SE_AS)
@@ -606,8 +612,7 @@ Asym_Max_shared_links <-
 Avg_links             <- apply(bandwidth_by_Link[,c(1,4)], 1, Fatpipe_link)
 Max_links             <- apply(bandwidth_by_Link[,c(1,5)], 1, Shared_link)
 Corr_Max_links        <- apply(bandwidth_by_Link[,c(1,6)], 1, Shared_link)
-Mock_10G_links        <- apply(bandwidth_by_Link[,c(1,8)], 1, Shared_link)
-Agg_Corr_Max_link     <- apply(bandwidth_by_Link[,c(1,9)], 1, Shared_link)
+Agg_Corr_Max_link     <- apply(bandwidth_by_Link[,c(1,7)], 1, Shared_link)
 Cluster_Corr_Max_link <- apply(bandwidth_by_clusterlink[,c(1,6)], 1, Intra_link)
 
 Services_to_site_routes <- lapply(sites, Services_to_site)
@@ -618,25 +623,25 @@ Asym_shared_routes_to_from_SE <- apply(asym_shared_routes, 1, Site_to_from_SE)
 Clusters_to_from_SE_bypass_routes <- apply(bypass_routes, 1, Bypass_Cluster_to_from_SE)
 
 ################################################## Create and export all the XML files #################################
-export_XML(all_site_ASes, Mock_10G_shared_links, Shared_routes_to_from_SE,"10G_SE")            # Sec III.A
+export_XML(all_site_ASes, Mock_10G_shared_links, Shared_routes_to_from_SE,"10G_SE")              # Sec III.A
 
-export_XML(all_site_ASes, Avg_shared_links, Shared_routes_to_from_SE,"Avg_SE")                 # Sec III.B
-export_XML(all_site_ASes, Max_shared_links, Shared_routes_to_from_SE,"Max_SE")                 # Sec III.B
+export_XML(all_site_ASes, Avg_shared_links, Shared_routes_to_from_SE,"Avg_SE")                   # Sec III.B
+export_XML(all_site_ASes, Max_shared_links, Shared_routes_to_from_SE,"Max_SE")                   # Sec III.B
 
-export_XML(all_site_ASes, Asym_Avg_shared_links, Asym_shared_routes_to_from_SE, "Asym_Avg_SE") # Sec III.C
-export_XML(all_site_ASes, Asym_Max_shared_links, Asym_shared_routes_to_from_SE, "Asym_Max_SE") # Sec III.C
+export_XML(all_site_ASes, Asym_Avg_shared_links, Asym_shared_routes_to_from_SE, "Asym_Avg_SE")   # Sec III.C
+export_XML(all_site_ASes, Asym_Max_shared_links, Asym_shared_routes_to_from_SE, "Asym_Max_SE")   # Sec III.C
 
+export_XML(all_site_ASes, Avg_links, Sites_to_from_SE_routes,"Avg_Site")                         # Sec III.D
 ##### WIP LINE #####
 
-export_XML(all_site_ASes, Avg_links, Sites_to_from_SE_routes,"Avg_lim")                        # Sec III.D
-export_XML(all_site_ASes, Max_links, Sites_to_from_SE_routes,"Max_lim")                        # Sec III.D
+export_XML(all_site_ASes_max_lim, Max_links, Sites_to_from_SE_routes,"Max_Site")                          # Sec III.D
 
-export_XML(all_site_ASes, Corr_Max_links, Sites_to_from_SE_routes,"Corr_Max_lim")
+export_XML(all_site_ASes_corr_max_lim, Corr_Max_links, Sites_to_from_SE_routes,"Corr_Max_Site") # Sec III.E
+
+#export_XML(all_site_ASes, Corr_Max_links, Sites_to_from_SE_routes,"Corr_Max_lim")
 #export_XML(all_site_ASes_with_cluster_links, Corr_Max_links, Sites_to_from_SE_routes, "Corr_Max_cluster")
 
 export_ultimate_XML(all_site_ASes, Agg_Corr_Max_link, Cluster_Corr_Max_link)
-
-export_XML(all_site_ASes, Mock_10G_links, Sites_to_from_SE_routes, "Mock_10G_lim")             # Unused
 
 #### Deprecated Stuff
 # Service_nodes_in_single_AS <- function(){
@@ -756,3 +761,4 @@ export_XML(all_site_ASes, Mock_10G_links, Sites_to_from_SE_routes, "Mock_10G_lim
 # export_XML(all_site_ASes_without_limiters, Avg_links, "Avg_no_lim")
 # export_XML(all_site_ASes_without_limiters, Max_links, "Max_no_lim")
 # export_XML(all_site_ASes_without_limiters, Corr_Max_links, "Corr_Max_no_lim")
+#export_XML(all_site_ASes, Mock_10G_links, Sites_to_from_SE_routes, "Mock_10G_lim")             # Unused
