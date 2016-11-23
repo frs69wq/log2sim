@@ -90,34 +90,21 @@ echo -e "\n" >> $output
 
 
 echo -e 'version=3\n' >> $output
-echo 'if [ $platform_type == "no_lim" ]
-then 
-  for platform in "Avg" "Max" "Corr_Avg" "Corr_Max" "Mock_1G" "Mock_10G"
-  do
+echo 'for platform in "10G_SE" "Avg_SE" "Max_SE" "Asym_Avg_SE" "Asym_Max_SE" "Avg_lim" "Max_lim" "Corr_Max_lim" "Corr_Max_cluster" "ultimate"
+    do
       echo -e "\\tSimulate on AS  - version ${version}" 
-      platform_file="simgrid_files/platform_'${workflow_dir}'_${platform}_${platform_type}.xml"
+      platform_file="simgrid_files/platform_'${workflow_dir}'_${platform}.xml"
       run=$cmd" ${platform_file} simgrid_files/'${deployment_file2}' '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose} ${flag}"
       echo -e "\\t\\t$run"
-      $run  1> timings/simulated_time_on_${platform}_${platform_type}_v${version}.csv \
-            2> csv_files/simulated_file_transfer_on_${platform}_${platform_type}_v${version}.csv
-      sed -i '1d' csv_files/simulated_file_transfer_on_${platform}_${platform_type}_v${version}.csv        
-  done   
-fi' >> $output
+      $run  1> timings/simulated_time_on_${platform}.csv \
+            2> csv_files/simulated_file_transfer_on_${platform}.csv
+      sed -i '1d' csv_files/simulated_file_transfer_on_${platform}.csv        
+    done' >> $output
 
 
-echo 'if [ $platform_type == "lim" ]
-then 
-  for platform in "Avg" "Max" "Corr_Avg" "Corr_Max" "Mock_1G" "Mock_10G"
-  do
-      echo -e "\\tSimulate on AS  - version ${version}" 
-      platform_file="simgrid_files/platform_'${workflow_dir}'_${platform}_${platform_type}.xml"
-      run=$cmd" ${platform_file} simgrid_files/'${deployment_file2}' '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose} ${flag}"
-      echo -e "\\t\\t$run"
-      $run  1> timings/simulated_time_on_${platform}_${platform_type}_v${version}.csv \
-            2> csv_files/simulated_file_transfer_on_${platform}_${platform_type}_v${version}.csv
-      sed -i '1d' csv_files/simulated_file_transfer_on_${platform}_${platform_type}_v${version}.csv        
-  done   
-fi' >> $output
+
+
+
 
 #give execution right to the generated file in .sh
 chmod +x $output
