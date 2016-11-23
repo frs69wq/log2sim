@@ -30,7 +30,7 @@ if (length(args) < 1) {
     output_dir="simgrid_files/"
   }
 }
-################################################## Operations on worker_nodes.csv ######################################
+################################################## Data preparation on worker_nodes.csv ################################
 split_and_rewrite_hostname <-function(df){
   df$hostname <- sapply(df$Name, function (x) strsplit(x,"[.]")[[1]][1])
   df$prefix <- gsub('[[:digit:]]+', '', df$hostname)
@@ -61,14 +61,14 @@ build_clusters <- function(workers){
   df$name = paste0(df$prefix,"-", df$Core,"cores-at-",df$MIPS,"MIPS",df$suffix)
   df
 }
-################################################## Operations on db_dump.csv ###########################################
+################################################## Data preparation on db_dump.csv #####################################
 get_job_start_times <- function (file_name){
   df <- subset(read.csv(file_name, header = TRUE, sep=' ',as.is=TRUE),
                select = c(JobId, DownloadStartTime,UploadStartTime))
   df$End <-0
   rename(df,c("DownloadStartTime" = "Start", "UploadStartTime" = "Start_Upload"))
 }
-################################################## Operations on file_transfer.csv #####################################
+################################################## Data preparation on file_transfer.csv ###############################
 update_start_end_times <-function(df){
   gate_count <- (nrow(df)-5)/6
   for(j in 1:(nrow(df)-gate_count-5)){
@@ -155,7 +155,7 @@ get_transfers <- function(file_name){
   }
   df
 }
-
+################################################## Maximum bandwidth correction ########################################
 correct_bandwidth <-function(df){
   df$concurrency_by_Link <- df$concurrency_by_ClusterLink <- 1
   df$concurrency_by_SE   <- df$concurrency_by_Site        <- 1
@@ -231,7 +231,7 @@ correct_bandwidth <-function(df){
   df$Corr_Bandwidth_by_ClusterLink <- df$Bandwidth * df$concurrency_by_ClusterLink
   df
 }
-################################################## Bandwidth aggregation ###############################################
+################################################## Bandwidth aggregation methods #######################################
 get_bandwidths_by_Site <- function(Transfers){
   subset(ddply(Transfers, c("SiteName", "File_Type"), summarize, Max=round(max(Bandwidth)),
                Corr_Max=round(max(Corr_Bandwidth_by_Site))), File_Type == 'Release', select=c("SiteName", "Max"))
@@ -239,34 +239,34 @@ get_bandwidths_by_Site <- function(Transfers){
 
 get_bandwidths_by_SE <- function(Transfers){
   to_SE <- ddply(Transfers[Transfers$UpDown != 2,], c("Destination"), summarize,
-              Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)), Corr_Max = round(max(Corr_Bandwidth_by_SE)))
-  names(to_SE) = c("SE","Avg_to","Max_to", "Corr_Max_to")
+              Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)))
+  names(to_SE) = c("SE","Avg_to","Max_to")
   from_SE <- ddply(Transfers[Transfers$UpDown == 2,], c("Source"), summarize,
-                   Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)), Corr_Max = round(max(Corr_Bandwidth_by_SE)))
-  names(from_SE) = c("SE","Avg_from","Max_from", "Corr_Max_From")
+                   Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)))
+  names(from_SE) = c("SE","Avg_from","Max_from")
   df <- merge(to_SE, from_SE, all=TRUE)
-  df$Avg <- apply(df[,c(2,5)], 1, function(s) if (is.na(s[1])) s[2] else if (is.na(s[2])) s[1] else (s[1]+s[2])/2)
-  df$Max <- apply(df[,c(3,6)], 1, function(s) if (is.na(s[1])) s[2] else if (is.na(s[2])) s[1] else (max(s[1], s[2])))
-  df$Corr_Max <- apply(df[,c(4,7)], 1,
-                       function(s) if (is.na(s[1])) s[2] else if (is.na(s[2])) s[1] else (max(s[1], s[2])))
+  df$Avg <- apply(df[,c(2,4)], 1, function(s) if (is.na(s[1])) s[2] else if (is.na(s[2])) s[1] else (s[1]+s[2])/2)
+  df$Max <- apply(df[,c(3,5)], 1, function(s) if (is.na(s[1])) s[2] else if (is.na(s[2])) s[1] else (max(s[1], s[2])))
   df$Mock_10G =1e10
-  subset(df, select=c("SE", "Avg", "Max", "Corr_Max", "Mock_10G"))
+  subset(df, select=c("SE", "Avg", "Max", "Mock_10G"))
 }
 
 get_bandwidths_by_SE_and_type <- function(Transfers){
   to_SE <- ddply(Transfers[Transfers$UpDown != 2,], c("Destination", "File_Type"), summarize,
-                 Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)))
-  names(to_SE) = c("SE","File_Type","Avg_to","Max_to")
+                 Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)), Corr_Max = round(max(Corr_Bandwidth_by_SE)))
+  names(to_SE) = c("SE","File_Type","Avg_to","Max_to", "Corr_Max_to")
   upload <- subset(to_SE, File_Type == 'Partial Upload')
   others <- ddply(subset(to_SE, !(SE %in% upload$SE)), .(SE), function(x) x[which.max(x$Max_to),])
   to_SE <- rbind(upload,others)
   from_SE <- ddply(Transfers[Transfers$UpDown == 2,], c("Source","File_Type"), summarize,
-                   Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)))
-  names(from_SE) = c("SE","File_Type","Avg_from","Max_from")
+                   Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)), Corr_Max = round(max(Corr_Bandwidth_by_SE)))
+  names(from_SE) = c("SE","File_Type","Avg_from","Max_from", "Corr_Max_from")
   release <- subset(from_SE, File_Type == c('Release'))
   others <- ddply(subset(from_SE, !(SE %in% release$SE)), .(SE), function(x) x[which.max(x$Max_from),])
   from_SE <- rbind(release,others)
-  merge(to_SE, from_SE, by=c("SE","File_Type"), all=TRUE)
+  df <- merge(to_SE, from_SE, by=c("SE","File_Type"), all=TRUE)
+  df <- suppressWarnings(aggregate(df,by=list(x=df$SE), min, na.rm=TRUE))
+  subset(df, select=-c(x,File_Type))
 }
 
 get_bandwidths_by_link <- function(Transfers){
@@ -576,29 +576,30 @@ all_site_ASes <- dlply(clusters, .(SiteName), Site_AS)
 all_SEs <- lapply(storage_elements, SE_AS)
 Service_link          <- newXMLNode("link", attrs=c(id="service_link", bandwidth="10Gbps", latency="500us"))
 
-Mock_10G_shared_links <- apply(bandwidth_by_SE[,c(1,5)], 1, function(x){
+Mock_10G_shared_links <- apply(bandwidth_by_SE[,c(1,4)], 1, function(x){
   newXMLNode("link", attrs= c(id=paste0(x[1],"_link"), bandwidth=paste0(as.numeric(x[2]),"bps"), latency="750us"))})
 
 Avg_shared_links <- apply(bandwidth_by_SE[,c(1,2)], 1, function(x){
   newXMLNode("link", attrs= c(id=paste0(x[1],"_link"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
                               latency="750us"))})
+
 Max_shared_links <- apply(bandwidth_by_SE[,c(1,3)], 1, function(x){
   newXMLNode("link", attrs= c(id=paste0(x[1],"_link"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
                               latency="750us"))})
 
 Asym_Avg_shared_links <-
-  c(apply(bandwidth_by_SE_and_type[!(is.na(bandwidth_by_SE_and_type$Avg_to)),c(1,3)], 1, function(x){
+  c(apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Avg_to)),c(1,2)], 1, function(x){
     newXMLNode("link", attrs= c(id=paste0(x[1],"_link_to"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
                                 latency="750us"))}),
-    apply(bandwidth_by_SE_and_type[!(is.na(bandwidth_by_SE_and_type$Avg_from)),c(1,5)], 1, function(x){
+    apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Avg_from)),c(1,5)], 1, function(x){
       newXMLNode("link", attrs= c(id=paste0(x[1],"_link_from"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
                                   latency="750us"))}))
 
 Asym_Max_shared_links <-
-  c(apply(bandwidth_by_SE_and_type[!(is.na(bandwidth_by_SE_and_type$Max_to)),c(1,4)], 1, function(x){
+  c(apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Max_to)),c(1,3)], 1, function(x){
     newXMLNode("link", attrs= c(id=paste0(x[1],"_link_to"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
                                 latency="750us"))}),
-    apply(bandwidth_by_SE_and_type[!(is.na(bandwidth_by_SE_and_type$Max_from)),c(1,6)], 1, function(x){
+    apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Max_from)),c(1,6)], 1, function(x){
       newXMLNode("link", attrs= c(id=paste0(x[1],"_link_from"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
                                   latency="750us"))}))
 
