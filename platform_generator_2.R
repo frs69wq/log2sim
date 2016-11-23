@@ -269,7 +269,7 @@ get_bandwidths_by_SE_and_type <- function(Transfers){
   subset(df, select=-c(x,File_Type))
 }
 
-get_bandwidths_by_link <- function(Transfers){
+get_bandwidths_by_Link <- function(Transfers){
   df <- ddply(Transfers, c("Link","File_Type"), summarize, count=length(Link), Avg=round(mean(Bandwidth)),
               Max=round(max(Bandwidth)),Corr_Max=round(max(Corr_Bandwidth_by_Link)), Mock_1G=1e9, Mock_10G=1e10)
   release <- subset(df, File_Type == 'Release')
@@ -298,7 +298,7 @@ get_bandwidths_by_clusterlink <- function(Transfers){
 select_shared_routes <- function(Sites, SEs){
   df <- merge(SEs, Sites)
   names(df) <- c("src", "dst")
-  df <- subset (df, paste0(src,"-",dst) %in% bandwidth_by_link$Link |paste0(dst,"-",src) %in% bandwidth_by_link$Link)
+  df <- subset (df, paste0(src,"-",dst) %in% bandwidth_by_Link$Link |paste0(dst,"-",src) %in% bandwidth_by_Link$Link)
   df$Link <- paste0(df$src,"_link")
   df$dst <- paste0("AS_", df$dst)
   df$gw_src <- df$src
@@ -312,7 +312,7 @@ select_asymmetric_shared_routes <- function(Sites, SEs){
   names(to_SE) <- c("src", "dst")
   to_SE$Link <- paste0(to_SE$dst,"_link_to")
   to_SE$ReverseLink <- paste0(to_SE$dst, "_link_from")
-  to_SE <- subset (to_SE, paste0(src,"-",dst) %in% bandwidth_by_link$Link)
+  to_SE <- subset (to_SE, paste0(src,"-",dst) %in% bandwidth_by_Link$Link)
   to_SE$src <- paste0("AS_", to_SE$src)
   to_SE$gw_src <- paste0(to_SE$src, "_router")
   to_SE$gw_dst <- to_SE$dst
@@ -322,7 +322,7 @@ select_asymmetric_shared_routes <- function(Sites, SEs){
   names(from_SE) <- c("src", "dst")
   from_SE$Link <- paste0(from_SE$src,"_link_from")
   from_SE$ReverseLink <- paste0(from_SE$src,"_link_to")
-  from_SE <- subset (from_SE, paste0(src,"-",dst) %in% bandwidth_by_link$Link)
+  from_SE <- subset (from_SE, paste0(src,"-",dst) %in% bandwidth_by_Link$Link)
   from_SE$dst <- paste0("AS_", from_SE$dst)
   from_SE$gw_src <- from_SE$src
   from_SE$src <- paste0("AS_", from_SE$src)
@@ -345,13 +345,13 @@ select_routes <- function(Sites, SEs){
   site_to_SE$gw_src <- paste0(site_to_SE$src, "_router")
   site_to_SE$gw_dst <- site_to_SE$dst
   site_to_SE$dst <- paste0("AS_", site_to_SE$dst)
-  site_to_SE <- subset (site_to_SE, Link %in% bandwidth_by_link$Link)
+  site_to_SE <- subset (site_to_SE, Link %in% bandwidth_by_Link$Link)
 
   SE_to_site <- merge(SEs, Sites)
   names(SE_to_site) <- c("src", "dst")
   SE_to_site$Link <- paste(SE_to_site$src, SE_to_site$dst, sep='-')
   SE_to_site$ReverseLink <- paste(SE_to_site$dst, SE_to_site$src, sep='-')
-  SE_to_site <- subset (SE_to_site, Link %in% bandwidth_by_link$Link)
+  SE_to_site <- subset (SE_to_site, Link %in% bandwidth_by_Link$Link)
   SE_to_site$dst <- paste0("AS_", SE_to_site$dst)
   SE_to_site$gw_src <- SE_to_site$src
   SE_to_site$src <- paste0("AS_", SE_to_site$src)
@@ -555,10 +555,10 @@ transfers         <- correct_bandwidth(transfers)
 bandwidth_by_SE          <- get_bandwidths_by_SE(transfers)
 bandwidth_by_Site        <- get_bandwidths_by_Site(transfers)
 bandwidth_by_SE_and_type <- get_bandwidths_by_SE_and_type(transfers)
-bandwidth_by_link        <- get_bandwidths_by_link(transfers)
+bandwidth_by_Link        <- get_bandwidths_by_Link(transfers)
 bandwidth_by_clusterlink <- get_bandwidths_by_clusterlink(transfers)
 #bandwidth_by_cluster     <- get_bandwidths_by_cluster(transfers)
-bandwidth_by_link        <- merge(bandwidth_by_link, sort=FALSE,
+bandwidth_by_Link        <- merge(bandwidth_by_Link, sort=FALSE,
                                   ddply(bandwidth_by_clusterlink, .(Link), summarize, Agg_Corr_Max = max(Corr_Max)))
 
 storage_elements  <- unique(c(transfers[transfers$UpDown != 2,]$Destination, transfers[transfers$UpDown == 2,]$Source))
@@ -603,11 +603,11 @@ Asym_Max_shared_links <-
       newXMLNode("link", attrs= c(id=paste0(x[1],"_link_from"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
                                   latency="750us"))}))
 
-Avg_links             <- apply(bandwidth_by_link[,c(1,4)], 1, Fatpipe_link)
-Max_links             <- apply(bandwidth_by_link[,c(1,5)], 1, Shared_link)
-Corr_Max_links        <- apply(bandwidth_by_link[,c(1,6)], 1, Shared_link)
-Mock_10G_links        <- apply(bandwidth_by_link[,c(1,8)], 1, Shared_link)
-Agg_Corr_Max_link     <- apply(bandwidth_by_link[,c(1,9)], 1, Shared_link)
+Avg_links             <- apply(bandwidth_by_Link[,c(1,4)], 1, Fatpipe_link)
+Max_links             <- apply(bandwidth_by_Link[,c(1,5)], 1, Shared_link)
+Corr_Max_links        <- apply(bandwidth_by_Link[,c(1,6)], 1, Shared_link)
+Mock_10G_links        <- apply(bandwidth_by_Link[,c(1,8)], 1, Shared_link)
+Agg_Corr_Max_link     <- apply(bandwidth_by_Link[,c(1,9)], 1, Shared_link)
 Cluster_Corr_Max_link <- apply(bandwidth_by_clusterlink[,c(1,6)], 1, Intra_link)
 
 Services_to_site_routes <- lapply(sites, Services_to_site)
@@ -740,7 +740,7 @@ export_XML(all_site_ASes, Mock_10G_links, Sites_to_from_SE_routes, "Mock_10G_lim
 # }
 
 #all_site_ASes_without_limiters <- dlply(clusters, .(SiteName), Site_AS_without_limiters)
-#Mock_1G_links         <- apply(bandwidth_by_link[,c(1,7)], 1, Shared_link)
+#Mock_1G_links         <- apply(bandwidth_by_Link[,c(1,7)], 1, Shared_link)
 
 #export_single_AS_XML("Mock_1G", "Sym")
 #export_XML(all_site_ASes_without_limiters, Mock_1G_links, "Mock_1G_no_lim")
