@@ -157,8 +157,8 @@ get_transfers <- function(file_name){
 }
 ################################################## Maximum bandwidth correction ########################################
 correct_bandwidth <-function(df){
-  df$concurrency_by_Link <- df$concurrency_by_ClusterLink <- 1
-  df$concurrency_by_SE   <- df$concurrency_by_Site        <- 1
+  df$concurrency_by_Link <- df$concurrency_by_Cluster <- 1
+  df$concurrency_by_SE   <- df$concurrency_by_Site    <- 1
   for(i in 1:nrow(df)){
     # Get the begin and end time of this transfer. Add 1 second (latency) to the start time
     begin <- df[i,]$Start + 1
@@ -180,25 +180,23 @@ correct_bandwidth <-function(df){
       others_by_Site <- subset(df, SiteName == df[i,]$SiteName & UpDown == 2 & (Start + 1) < end & End >= begin)
 
       others_by_Link <- subset(df, Link == df[i,]$Link & UpDown == 2 & (Start + 1) < end & End >= begin)
-      others_by_ClusterLink <- subset(df, ClusterLink == df[i,]$ClusterLink & UpDown == 2 &
-                                        (Start + 1) < end & End >= begin)
+      others_by_Cluster <- subset(df, Cluster == df[i,]$Cluster & UpDown == 2 & (Start + 1) < end & End >= begin)
     } else {
       others_by_SE   <- subset(df, Destination == df[i,]$Destination & UpDown != 2 & (Start + 1) < end & End >= begin)
       others_by_Site <- subset(df, SiteName == df[i,]$SiteName & UpDown != 2 & (Start + 1) < end & End >= begin)
 
       others_by_Link <- subset(df, Link == df[i,]$Link & UpDown != 2 & (Start + 1) < end & End >= begin)
-      others_by_ClusterLink <- subset(df, ClusterLink == df[i,]$ClusterLink & UpDown != 2 &
-                                        (Start + 1) < end & End >= begin)
+      others_by_Cluster <- subset(df, Cluster == df[i,]$Cluster & UpDown != 2 & (Start + 1) < end & End >= begin)
     }
     if (n_interval == 1){
       # if there is only one interval to cover, we're done
-      df[i,]$concurrency_by_SE          <- max(1,nrow(others_by_SE))
-      df[i,]$concurrency_by_Site        <- max(1,nrow(others_by_Site))
-      df[i,]$concurrency_by_Link        <- max(1,nrow(others_by_Link))
-      df[i,]$concurrency_by_ClusterLink <- max(1,nrow(others_by_ClusterLink))
+      df[i,]$concurrency_by_SE      <- max(1,nrow(others_by_SE))
+      df[i,]$concurrency_by_Site    <- max(1,nrow(others_by_Site))
+      df[i,]$concurrency_by_Link    <- max(1,nrow(others_by_Link))
+      df[i,]$concurrency_by_Cluster <- max(1,nrow(others_by_Cluster))
     } else {
       cur_concurrency_by_SE <- cur_concurrency_by_Site <- 0
-      cur_concurrency_by_Link <- cur_concurrency_by_ClusterLink <- 0
+      cur_concurrency_by_Link <- cur_concurrency_by_Cluster <- 0
       if (nrow(others_by_Link) > 1) {
         # This makes sense only if there is concurrency
         for(s in 1: n_interval){
@@ -212,23 +210,23 @@ correct_bandwidth <-function(df){
             1/(nrow(subset(others_by_Site, (Start +1) < end & End >= begin)))
           cur_concurrency_by_Link <- cur_concurrency_by_Link +
             1/(nrow(subset(others_by_Link, (Start +1) < end & End >= begin)))
-          cur_concurrency_by_ClusterLink <- cur_concurrency_by_ClusterLink +
-            1/(nrow(subset(others_by_ClusterLink, (Start +1) < end & End >= begin)))
+          cur_concurrency_by_Cluster <- cur_concurrency_by_Cluster +
+            1/(nrow(subset(others_by_Cluster, (Start +1) < end & End >= begin)))
           # update begin for the next round
           begin <- end
         }
         # End of formula: N/sum_{i=1}^{N}(1/C_i)
-        df[i,]$concurrency_by_SE          <- n_interval / cur_concurrency_by_SE
-        df[i,]$concurrency_by_Site        <- n_interval / cur_concurrency_by_Site
-        df[i,]$concurrency_by_Link        <- n_interval / cur_concurrency_by_Link
-        df[i,]$concurrency_by_ClusterLink <- n_interval / cur_concurrency_by_ClusterLink
+        df[i,]$concurrency_by_SE      <- n_interval / cur_concurrency_by_SE
+        df[i,]$concurrency_by_Site    <- n_interval / cur_concurrency_by_Site
+        df[i,]$concurrency_by_Link    <- n_interval / cur_concurrency_by_Link
+        df[i,]$concurrency_by_Cluster <- n_interval / cur_concurrency_by_Cluster
       }
     }
   }
-  df$Corr_Bandwidth_by_SE          <- df$Bandwidth * df$concurrency_by_SE
-  df$Corr_Bandwidth_by_Site        <- df$Bandwidth * df$concurrency_by_Site
-  df$Corr_Bandwidth_by_Link        <- df$Bandwidth * df$concurrency_by_Link
-  df$Corr_Bandwidth_by_ClusterLink <- df$Bandwidth * df$concurrency_by_ClusterLink
+  df$Corr_Bandwidth_by_SE      <- df$Bandwidth * df$concurrency_by_SE
+  df$Corr_Bandwidth_by_Site    <- df$Bandwidth * df$concurrency_by_Site
+  df$Corr_Bandwidth_by_Link    <- df$Bandwidth * df$concurrency_by_Link
+  df$Corr_Bandwidth_by_Cluster <- df$Bandwidth * df$concurrency_by_Cluster
   df
 }
 ################################################## Bandwidth aggregation methods #######################################
@@ -279,21 +277,21 @@ get_bandwidths_by_Link <- function(Transfers){
   rbind(release,others)
 }
 
-get_bandwidths_by_clusterlink <- function(Transfers){
-  df <- ddply(Transfers, c("ClusterLink","File_Type"), summarize, count=length(ClusterLink),
+get_bandwidths_by_Cluster <- function(Transfers){
+  df <- ddply(Transfers, c("Cluster","File_Type"), summarize, count=length(Cluster),
               Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)),
-              Corr_Max=round(max(Corr_Bandwidth_by_ClusterLink)), Mock_1G=1e9, Mock_10G=1e10, Link=unique(Link))
+              Corr_Max=round(max(Corr_Bandwidth_by_Cluster)))
   release <- subset(df, File_Type == 'Release')
-  others <- ddply(subset(df, !(ClusterLink %in% release$ClusterLink)), .(ClusterLink), function(x) x[which.max(x$Max),])
+  others <- ddply(subset(df, !(Cluster %in% release$Cluster)), .(Cluster), function(x) x[which.max(x$Max),])
   rbind(release,others)
 }
 
-# get_bandwidths_by_cluster <- function(Transfers){
-#   df <- ddply(Transfers, c("Cluster","File_Type"), summarize, count=length(Cluster),
+# get_bandwidths_by_clusterlink <- function(Transfers){
+#   df <- ddply(Transfers, c("ClusterLink","File_Type"), summarize, count=length(ClusterLink),
 #               Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)),
-#               Corr_Max=round(max(Corr_Bandwidth_by_cluster)))
+#               Corr_Max=round(max(Corr_Bandwidth_by_ClusterLink)), Mock_1G=1e9, Mock_10G=1e10, Link=unique(Link))
 #   release <- subset(df, File_Type == 'Release')
-#   others <- ddply(subset(df, !(Cluster %in% release$Cluster)), .(Cluster), function(x) x[which.max(x$Max),])
+#   others <- ddply(subset(df, !(ClusterLink %in% release$ClusterLink)), .(ClusterLink), function(x) x[which.max(x$Max),])
 #   rbind(release,others)
 # }
 ################################################## Route selection #####################################################
@@ -367,41 +365,41 @@ select_routes <- function(Sites, SEs){
   subset(rbind(site_to_SE, SE_to_site), select = c(1:4,6:8,5))
 }
 
-select_bypass_routes <- function(Clusters){
-  site_name <- unique (Clusters$SiteName)
-  cluster_names <- Clusters$name
-
-  cluster_to_SE <- merge(cluster_names, storage_elements)
-  names(cluster_to_SE) <- c("src", "dst")
-  cluster_to_SE$Link <- paste(cluster_to_SE$src, site_name,cluster_to_SE$dst, sep='-')
-  cluster_to_SE$ReverseLink <- paste(site_name, cluster_to_SE$dst, cluster_to_SE$src, sep='-')
-  cluster_to_SE$SiteLink <- paste(site_name,cluster_to_SE$dst, sep='-')
-  cluster_to_SE$ReverseSiteLink <- paste(cluster_to_SE$dst, site_name, sep='-')
-  cluster_to_SE$src <- as.character(cluster_to_SE$src)
-  cluster_to_SE$dst <- as.character(cluster_to_SE$dst)
-  cluster_to_SE$gw_src <- paste0(cluster_to_SE$src, "_router")
-  cluster_to_SE$gw_dst <- cluster_to_SE$dst
-  cluster_to_SE <- subset (cluster_to_SE, Link %in% bandwidth_by_clusterlink$ClusterLink)
-
-  SE_to_cluster <- merge(storage_elements, cluster_names)
-  names(SE_to_cluster) <- c("src", "dst")
-  SE_to_cluster$Link <- paste(site_name,SE_to_cluster$src, SE_to_cluster$dst, sep='-')
-  SE_to_cluster$ReverseLink <- paste(SE_to_cluster$dst, site_name, SE_to_cluster$src, sep='-')
-  SE_to_cluster$SiteLink <- paste(SE_to_cluster$src, site_name, sep='-')
-  SE_to_cluster$ReverseSiteLink <- paste(site_name, SE_to_cluster$src, sep='-')
-  SE_to_cluster <- subset (SE_to_cluster, Link %in% bandwidth_by_clusterlink$ClusterLink)
-  SE_to_cluster$src <- as.character(SE_to_cluster$src)
-  SE_to_cluster$dst <- as.character(SE_to_cluster$dst)
-  SE_to_cluster$gw_src <- SE_to_cluster$src
-  SE_to_cluster$gw_dst <- paste0(SE_to_cluster$dst, "_router")
-
-  cluster_to_SE$symmetrical <- sapply(cluster_to_SE$ReverseLink, function(x)
-    if (x %in% SE_to_cluster$Link) "NO" else "YES")
-  SE_to_cluster$symmetrical <- sapply(SE_to_cluster$ReverseLink, function(x)
-    if (x %in% cluster_to_SE$Link) "NO" else "YES")
-
-  rbind(cluster_to_SE, SE_to_cluster)
-}
+# select_bypass_routes <- function(Clusters){
+#   site_name <- unique (Clusters$SiteName)
+#   cluster_names <- Clusters$name
+#
+#   cluster_to_SE <- merge(cluster_names, storage_elements)
+#   names(cluster_to_SE) <- c("src", "dst")
+#   cluster_to_SE$Link <- paste(cluster_to_SE$src, site_name,cluster_to_SE$dst, sep='-')
+#   cluster_to_SE$ReverseLink <- paste(site_name, cluster_to_SE$dst, cluster_to_SE$src, sep='-')
+#   cluster_to_SE$SiteLink <- paste(site_name,cluster_to_SE$dst, sep='-')
+#   cluster_to_SE$ReverseSiteLink <- paste(cluster_to_SE$dst, site_name, sep='-')
+#   cluster_to_SE$src <- as.character(cluster_to_SE$src)
+#   cluster_to_SE$dst <- as.character(cluster_to_SE$dst)
+#   cluster_to_SE$gw_src <- paste0(cluster_to_SE$src, "_router")
+#   cluster_to_SE$gw_dst <- cluster_to_SE$dst
+#   cluster_to_SE <- subset (cluster_to_SE, Link %in% bandwidth_by_clusterlink$ClusterLink)
+#
+#   SE_to_cluster <- merge(storage_elements, cluster_names)
+#   names(SE_to_cluster) <- c("src", "dst")
+#   SE_to_cluster$Link <- paste(site_name,SE_to_cluster$src, SE_to_cluster$dst, sep='-')
+#   SE_to_cluster$ReverseLink <- paste(SE_to_cluster$dst, site_name, SE_to_cluster$src, sep='-')
+#   SE_to_cluster$SiteLink <- paste(SE_to_cluster$src, site_name, sep='-')
+#   SE_to_cluster$ReverseSiteLink <- paste(site_name, SE_to_cluster$src, sep='-')
+#   SE_to_cluster <- subset (SE_to_cluster, Link %in% bandwidth_by_clusterlink$ClusterLink)
+#   SE_to_cluster$src <- as.character(SE_to_cluster$src)
+#   SE_to_cluster$dst <- as.character(SE_to_cluster$dst)
+#   SE_to_cluster$gw_src <- SE_to_cluster$src
+#   SE_to_cluster$gw_dst <- paste0(SE_to_cluster$dst, "_router")
+#
+#   cluster_to_SE$symmetrical <- sapply(cluster_to_SE$ReverseLink, function(x)
+#     if (x %in% SE_to_cluster$Link) "NO" else "YES")
+#   SE_to_cluster$symmetrical <- sapply(SE_to_cluster$ReverseLink, function(x)
+#     if (x %in% cluster_to_SE$Link) "NO" else "YES")
+#
+#   rbind(cluster_to_SE, SE_to_cluster)
+# }
 ################################################## Generation of the different parts of an XML file ####################
 Service_AS <- function(){
   AS     <- newXMLNode("AS", attrs=c(id="Services", routing="Full"))
@@ -521,15 +519,15 @@ Site_to_from_SE_shared <- function (x){
   newXMLNode("ASroute", attrs=c(x[1], x[2], x[4], x[5]), newXMLNode("link_ctn", attrs=c(id=as.character(x[3]))))
 }
 
-Bypass_Cluster_to_from_SE <-function (x){
-  route = newXMLNode("bypassASroute", attrs=c(x[2], x[3], x[8], x[9]),
-                     newXMLNode("link_ctn", attrs=c(id=as.character(x[4]))),
-                     newXMLNode("link_ctn", attrs=c(id=as.character(x[6]))))
-  if (as.character(x[7]) == "NO"){
-    addAttributes(route, symmetrical="NO")
-  }
-  route
-}
+# Bypass_Cluster_to_from_SE <-function (x){
+#   route = newXMLNode("bypassASroute", attrs=c(x[2], x[3], x[8], x[9]),
+#                      newXMLNode("link_ctn", attrs=c(id=as.character(x[4]))),
+#                      newXMLNode("link_ctn", attrs=c(id=as.character(x[6]))))
+#   if (as.character(x[7]) == "NO"){
+#     addAttributes(route, symmetrical="NO")
+#   }
+#   route
+# }
 
 export_XML <-function(SITES, LINKS, ROUTES, TAG){
   t = xmlTree("platform", attrs=c(version="4"),
@@ -540,15 +538,15 @@ export_XML <-function(SITES, LINKS, ROUTES, TAG){
   cat(saveXML(t), file=paste0(output_dir,"platform_",workflow_name,"_",TAG,".xml"))
 }
 
-export_ultimate_XML <- function(SITES, LINKS, CLUSTERLINKS){
-  t = xmlTree("platform", attrs=c(version="4"),
-              dtd='platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd"')
-  t$addNode("AS", attrs=c(id=workflow_name, routing="Full"),
-            .children= c(service_AS, SITES, all_SEs, Service_link, LINKS, CLUSTERLINKS,
-                         Services_to_site_routes, Services_to_SE_routes, Sites_to_from_SE_routes,
-                         Clusters_to_from_SE_bypass_routes))
-  cat(saveXML(t), file=paste0(output_dir,"platform_",workflow_name,"_ultimate.xml"))
-}
+# export_ultimate_XML <- function(SITES, LINKS, CLUSTERLINKS){
+#   t = xmlTree("platform", attrs=c(version="4"),
+#               dtd='platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd"')
+#   t$addNode("AS", attrs=c(id=workflow_name, routing="Full"),
+#             .children= c(service_AS, SITES, all_SEs, Service_link, LINKS, CLUSTERLINKS,
+#                          Services_to_site_routes, Services_to_SE_routes, Sites_to_from_SE_routes,
+#                          Clusters_to_from_SE_bypass_routes))
+#   cat(saveXML(t), file=paste0(output_dir,"platform_",workflow_name,"_ultimate.xml"))
+# }
 ################################################## Produce data frames and lists #######################################
 workers           <- get_worker_nodes(paste0(wd,'worker_nodes.csv'))
 sites             <- unique(workers$SiteName)
@@ -561,17 +559,17 @@ bandwidth_by_SE          <- get_bandwidths_by_SE(transfers)
 bandwidth_by_Site        <- get_bandwidths_by_Site(transfers)
 bandwidth_by_SE_and_type <- get_bandwidths_by_SE_and_type(transfers)
 bandwidth_by_Link        <- get_bandwidths_by_Link(transfers)
-bandwidth_by_clusterlink <- get_bandwidths_by_clusterlink(transfers)
-#bandwidth_by_cluster     <- get_bandwidths_by_cluster(transfers)
-bandwidth_by_Link        <- merge(bandwidth_by_Link, sort=FALSE,
-                                  ddply(bandwidth_by_clusterlink, .(Link), summarize, Agg_Corr_Max = max(Corr_Max)))
+bandwidth_by_Cluster     <- get_bandwidths_by_Cluster(transfers)
+#bandwidth_by_Link        <- merge(bandwidth_by_Link, sort=FALSE,
+#                                  ddply(bandwidth_by_clusterlink, .(Link), summarize, Agg_Corr_Max = max(Corr_Max)))
+#bandwidth_by_clusterlink <- get_bandwidths_by_clusterlink(transfers)
 
 storage_elements  <- unique(c(transfers[transfers$UpDown != 2,]$Destination, transfers[transfers$UpDown == 2,]$Source))
 
 shared_routes      <- select_shared_routes(sites, storage_elements)
 asym_shared_routes <- select_asymmetric_shared_routes(sites, storage_elements)
 routes             <- select_routes(sites, storage_elements)
-bypass_routes      <- ddply(clusters, .(SiteName), select_bypass_routes)
+#bypass_routes      <- ddply(clusters, .(SiteName), select_bypass_routes)
 ################################################## Produce all the components of the XML files #########################
 service_AS <- Service_AS()
 
@@ -629,8 +627,8 @@ SE_Corr_Max_limiters <-
 Avg_links             <- apply(bandwidth_by_Link[,c(1,4)], 1, Fatpipe_link)
 Max_links             <- apply(bandwidth_by_Link[,c(1,5)], 1, Shared_link)
 Corr_Max_links        <- apply(bandwidth_by_Link[,c(1,6)], 1, Shared_link)
-Agg_Corr_Max_link     <- apply(bandwidth_by_Link[,c(1,7)], 1, Shared_link)
-Cluster_Corr_Max_link <- apply(bandwidth_by_clusterlink[,c(1,6)], 1, Intra_link)
+#Cluster_Corr_Max_link <- apply(bandwidth_by_Cluster[,c(1,6)], 1, Intra_link)
+#Agg_Corr_Max_link     <- apply(bandwidth_by_Link[,c(1,7)], 1, Shared_link)
 
 Services_to_site_routes           <- lapply(sites, Services_to_site)
 Services_to_SE_routes             <- lapply(storage_elements, Services_to_SE)
@@ -638,7 +636,7 @@ Shared_routes_to_from_SE          <- apply(shared_routes, 1, Site_to_from_SE_sha
 Asym_shared_routes_to_from_SE     <- apply(asym_shared_routes, 1, Site_to_from_SE)
 Sites_to_from_SE_routes           <- apply(routes, 1, Site_to_from_SE)
 Limited_routes_to_from_SE         <- apply(routes, 1, Site_to_from_SE_limited)
-Clusters_to_from_SE_bypass_routes <- apply(bypass_routes, 1, Bypass_Cluster_to_from_SE)
+#Clusters_to_from_SE_bypass_routes <- apply(bypass_routes, 1, Bypass_Cluster_to_from_SE)
 
 ################################################## Create and export all the XML files #################################
 export_XML(all_site_ASes, Mock_10G_shared_links, Shared_routes_to_from_SE,"10G_SE")                    # Sec III.A
@@ -656,9 +654,9 @@ export_XML(all_site_ASes_corr_max_lim, c(SE_Corr_Max_limiters, Corr_Max_links), 
            Limited_routes_to_from_SE,"Corr_Max_Site")
 
 ##### WIP LINE #####
-#export_XML(all_site_ASes_with_cluster_links, Corr_Max_links, Sites_to_from_SE_routes, "Corr_Max_cluster")
+#export_XML(all_site_ASes_with_cluster_links, Corr_Max_links, Sites_to_from_SE_routes, "Corr_Max_cluster") # Sec III.F
 
-export_ultimate_XML(all_site_ASes, Agg_Corr_Max_link, Cluster_Corr_Max_link)
+#export_ultimate_XML(all_site_ASes, Agg_Corr_Max_link, Cluster_Corr_Max_link)
 
 ################################### Deprecated Stuff ###################################################################
 # Service_nodes_in_single_AS <- function(){
