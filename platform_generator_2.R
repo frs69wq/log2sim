@@ -659,85 +659,6 @@ export_XML(all_site_ASes_corr_max_lim, c(SE_Corr_Max_limiters, Corr_Max_links), 
 #export_ultimate_XML(all_site_ASes, Agg_Corr_Max_link, Cluster_Corr_Max_link)
 
 ################################### Deprecated Stuff ###################################################################
-# Service_nodes_in_single_AS <- function(){
-#   vip      <- newXMLNode("host", attrs=c(id="vip.creatis.insa-lyon.fr", speed="5Gf",core="48"))
-#   vip_link <- newXMLNode("link", attrs=c(id="vip.creatis.insa-lyon.fr_link", bandwidth="10Gbps", latency="500us",
-#                                          sharing_policy="FULLDUPLEX"))
-#   vip_host_link <- newXMLNode("host_link", attrs=c(id="vip.creatis.insa-lyon.fr",
-#                                                    up="vip.creatis.insa-lyon.fr_link_UP",
-#                                                    down="vip.creatis.insa-lyon.fr_link_DOWN"))
-#   lfc      <- newXMLNode("host", attrs=c(id="lfc-biomed.in2p3.fr", speed="5Gf", core="48"))
-#   lfc_link <- newXMLNode("link", attrs=c(id="lfc-biomed.in2p3.fr_link", bandwidth="10Gbps", latency="500us",
-#                                          sharing_policy="FULLDUPLEX"))
-#   lfc_host_link <- newXMLNode("host_link", attrs=c(id="lfc-biomed.in2p3.fr",
-#                                                    up="lfc-biomed.in2p3.fr_link_UP",
-#                                                    down="lfc-biomed.in2p3.fr_link_DOWN"))
-#   c(vip, vip_link, vip_host_link, lfc, lfc_link, lfc_host_link)
-# }
-#
-# Worker_in_single_AS <- function(worker){
-#   host <- newXMLNode("host", attrs=c(id=as.character(worker[1]),
-#                                      speed=paste0(as.numeric(worker[3]),"Mf"),
-#                                      core=as.numeric(worker[2])),
-#                      newXMLNode("prop", attrs=c(id="closeSE", value=as.character(worker[6]))))
-#   link <- newXMLNode("link", attrs=c(id=paste0(worker[1],"_link"), latency="500us",
-#                                      bandwidth=paste0(as.numeric(worker[4]),"Mbps"),
-#                                      sharing_policy="FULLDUPLEX"))
-#   host_link <- newXMLNode("host_link", attrs=c(id=as.character(worker[1]), up=paste0(worker[1],"_link_UP"),
-#                                                down=paste0(worker[1],"_link_DOWN")))
-#   c(host, link, host_link)
-# }
-#
-# SEs_in_single_AS <-function(SE, METHOD, SYM){
-#   id <-as.character(SE[1])
-#   host <- newXMLNode("host", attrs=c(id=id, speed="5Gf", core="48"))
-#   host_link <- newXMLNode("host_link", attrs=c(id=id,up=paste0(id,"_link_UP"), down=paste0(id,"_link_DOWN")))
-#   if (METHOD == "Avg")
-#     if (SYM == "Sym" || is.na(SE[2]) || is.na(SE[4])) {
-#       link <- newXMLNode("link", attrs=c(id=paste0(id,"_link"),
-#                                          bandwidth=paste0(as.numeric(SE[6]),"bps"), latency="500us",
-#                                          sharing_policy="FULLDUPLEX"))
-#       c(host, link, host_link)
-#     } else {
-#       link_up <- newXMLNode("link", attrs=c(id=paste0(id,"_link_UP"),
-#                                             bandwidth=paste0(as.numeric(SE[4]),"bps"), latency="500us"))
-#       link_down <- newXMLNode("link", attrs=c(id=paste0(id,"_link_DOWN"),
-#                                               bandwidth=paste0(as.numeric(SE[2]),"bps"), latency="500us"))
-#       c(host, link_up, link_down, host_link)
-#     }
-#   else if (METHOD == "Max"){
-#     if (SYM == "Sym" || is.na(SE[3]) || is.na(SE[5])) {
-#       link <- newXMLNode("link", attrs=c(id=paste0(id,"_link"),
-#                                          bandwidth=paste0(as.numeric(SE[7]),"bps"), latency="500us",
-#                                          sharing_policy="FULLDUPLEX"))
-#       c(host, link, host_link)
-#     } else {
-#       link_up <- newXMLNode("link", attrs=c(id=paste0(id,"_link_UP"),
-#                                             bandwidth=paste0(as.numeric(SE[5]),"bps"), latency="500us"))
-#       link_down <- newXMLNode("link", attrs=c(id=paste0(id,"_link_DOWN"),
-#                                               bandwidth=paste0(as.numeric(SE[3]),"bps"), latency="500us"))
-#       c(host, link_up, link_down, host_link)
-#     }
-#   } else if (METHOD == "Mock_1G"){
-#     link <- newXMLNode("link", attrs=c(id=paste0(id,"_link"),
-#                                        bandwidth=paste0(as.numeric(SE[8]),"bps"), latency="500us",
-#                                        sharing_policy="FULLDUPLEX"))
-#     c(host, link, host_link)
-#   } else {
-#     link <- newXMLNode("link", attrs=c(id=paste0(id,"_link"),
-#                                        bandwidth=paste0(as.numeric(SE[9]),"bps"), latency="500us",
-#                                        sharing_policy="FULLDUPLEX"))
-#     c(host, link, host_link)
-#   }
-# }
-#
-# Routing_in_single_AS <- function(){
-#   router <- newXMLNode("router", attrs=c(id=paste0(workflow_name, "_router")))
-#   backbone <- newXMLNode("backbone", attrs=c(id=paste0(workflow_name, "_backbone"),
-#                                              bandwidth="100GBps", latency="1500us"))
-#   c(router, backbone)
-# }
-
 # Site_AS_without_limiters <- function(df){
 #   site_name = unique(df$SiteName)
 #   AS         <- newXMLNode("AS", attrs=c(id=paste0("AS_", site_name), routing="Full"))
@@ -758,29 +679,13 @@ export_XML(all_site_ASes_corr_max_lim, c(SE_Corr_Max_limiters, Corr_Max_links), 
 #                newXMLNode("link_ctn", attrs=c(id=paste(site_name,"backbone", sep="_")))))
 #   addChildren(AS, clusters, router_AS, backbone, routes)
 # }
-# export_single_AS_XML <- function (METHOD, SYM){
-#   t = xmlTree("platform", attrs=c(version="4"),
-#               dtd='platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd"')
-#   t$addNode("AS", attrs=c(id=workflow_name, routing="Cluster"),
-#             .children = c(Service_nodes_in_single_AS(), apply(workers, 1, Worker_in_single_AS),
-#                           apply(bandwidth_by_SE, 1, function(x) SEs_in_single_AS(x,METHOD, SYM)),
-#                           Routing_in_single_AS()))
-#   cat(saveXML(t), file=paste0(output_dir,"single_AS_",workflow_name,"_",METHOD,"_",SYM,".xml"))
-# }
 
 #all_site_ASes_without_limiters <- dlply(clusters, .(SiteName), Site_AS_without_limiters)
 #Mock_1G_links         <- apply(bandwidth_by_Link[,c(1,7)], 1, Shared_link)
 
-#export_single_AS_XML("Mock_1G", "Sym")
 #export_XML(all_site_ASes_without_limiters, Mock_1G_links, "Mock_1G_no_lim")
 #export_XML(all_site_ASes, Mock_1G_links, "Mock_1G_lim")
 
-#export_single_AS_XML("Avg", "Sym")
-#export_single_AS_XML("Max", "Sym")
-#export_single_AS_XML("Avg", "Asym")
-#export_single_AS_XML("Max", "Asym")
-
-#export_single_AS_XML("Mock_10G", "Sym")
 #export_XML(all_site_ASes_without_limiters, Mock_10G_links, "Mock_10G_no_lim")
 # export_XML(all_site_ASes_without_limiters, Avg_links, "Avg_no_lim")
 # export_XML(all_site_ASes_without_limiters, Max_links, "Max_no_lim")
