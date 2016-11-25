@@ -90,7 +90,7 @@ echo -e "\n" >> $output
 
 
 echo -e 'version=3\n' >> $output
-echo 'for platform in "10G_SE" "Avg_SE" "Max_SE" "Asym_Avg_SE" "Asym_Max_SE" "Avg_lim" "Max_lim" "Corr_Max_lim" "Corr_Max_cluster" "ultimate"
+echo 'for platform in "10G_SE" "Avg_SE" "Max_SE" "Asym_Avg_SE" "Asym_Max_SE" "Avg_Site" "Max_Site" "Corr_Max_Site" "Avg_cluster" "Corr_Max_cluster"
     do
       echo -e "\\tSimulate on AS  - version ${version}" 
       platform_file="simgrid_files/platform_'${workflow_dir}'_${platform}.xml"
