@@ -418,9 +418,13 @@ Site_AS_with_cluster_links <- function(df, bb_bw, c_bw){
   backbone <- newXMLNode("link",attrs=c(id=paste(site_name,"backbone", sep="_"),
                                         bandwidth=bandwidth_by_Site[bandwidth_by_Site$SiteName==site_name,bb_bw],
                                         latency="0"))
-  cluster_links   <- apply(df, 1, function(c)
-    newXMLNode("link",attrs=c(id=paste0(c[1],"_link"),
-                              bandwidth=paste0(as.numeric(c[c_bw]),"bps"), latency="750us")))
+  cluster_links   <- apply(df, 1, function(c){
+    link <- newXMLNode("link",attrs=c(id=paste0(c[1],"_link"),
+                              bandwidth=paste0(as.numeric(c[c_bw]),"bps"), latency="750us"))
+    if (c_bw == 10) # Avg bandwidth
+      addAttributes(link, sharing_policy="FATPIPE")
+    link
+    })
   routes     <-  apply(df, 1, function(c)
     newXMLNode("ASroute", attrs=c(src=as.character(c[1]), dst=paste("AS",site_name, "gw", sep="_"),
                                   gw_src=paste0(c[1], "_router"),
