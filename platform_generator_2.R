@@ -520,7 +520,7 @@ Mock_10G_shared_links <- apply(bandwidth_by_SE[,c(1,4)], 1, function(x){
 
 Avg_shared_links <- apply(bandwidth_by_SE[,c(1,2)], 1, function(x){
   newXMLNode("link", attrs= c(id=paste0(x[1],"_link"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
-                              latency="750us"))})
+                              latency="750us", sharing_policy = "FATPIPE"))})
 
 Max_shared_links <- apply(bandwidth_by_SE[,c(1,3)], 1, function(x){
   newXMLNode("link", attrs= c(id=paste0(x[1],"_link"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
@@ -529,10 +529,10 @@ Max_shared_links <- apply(bandwidth_by_SE[,c(1,3)], 1, function(x){
 Asym_Avg_shared_links <-
   c(apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Avg_to)),c(1,2)], 1, function(x){
     newXMLNode("link", attrs= c(id=paste0(x[1],"_link_to"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
-                                latency="750us"))}),
+                                latency="750us", sharing_policy = "FATPIPE"))}),
     apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Avg_from)),c(1,5)], 1, function(x){
       newXMLNode("link", attrs= c(id=paste0(x[1],"_link_from"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
-                                  latency="750us"))}))
+                                  latency="750us", sharing_policy = "FATPIPE"))}))
 
 Asym_Max_shared_links <-
   c(apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Max_to)),c(1,3)], 1, function(x){
