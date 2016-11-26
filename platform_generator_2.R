@@ -420,7 +420,7 @@ Site_AS_with_cluster_links <- function(df, bb_bw, c_bw){
                                         latency="0"))
   cluster_links   <- apply(df, 1, function(c){
     link <- newXMLNode("link",attrs=c(id=paste0(c[1],"_link"),
-                              bandwidth=paste0(as.numeric(c[c_bw]/0.97),"bps"), latency="750us"))
+                              bandwidth=paste0(as.numeric(c[c_bw])/0.97,"bps"), latency="750us"))
     if (c_bw == 10) # Avg bandwidth
       addAttributes(link, sharing_policy="FATPIPE")
     link
