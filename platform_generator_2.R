@@ -536,6 +536,7 @@ Site_to_from_SE_shared <- function (x){
 
 Bypass_Max_Cluster_to_from_SE <-function (x){
   route = newXMLNode("bypassASroute", attrs=c(x[2], x[3], x[8], x[9]),
+                     newXMLNode("link_ctn", attrs=c(id=as.character(x[6]))),
                      newXMLNode("link_ctn", attrs=c(id=as.character(x[4]))),
                      newXMLNode("link_ctn", attrs=c(id=as.character(x[7]))))
   if (as.character(x[7]) == "NO"){
