@@ -130,7 +130,7 @@ info "Generating simulation launcher ..."
 cmd="./launcher_generator.sh $workflow_dir cheat initial"
 info "\t$cmd"
 $cmd
-info "\tLauncher: simulate_$workflow_dir.sh ... created."
+info "\tLauncher: run_simulations_$workflow_dir.sh ... created."
 
 ##############################################################################
 #                                                                            #
@@ -154,7 +154,7 @@ README
 #                             Analysis File                                  #
 #                                                                            #
 ##############################################################################
-sed s/WORKFLOW_NAME/$workflow_dir/g Analysis.Rmd > Analysis_$workflow_dir.Rmd
+#sed s/WORKFLOW_NAME/$workflow_dir/g Analysis.Rmd > Analysis_$workflow_dir.Rmd
 
 ##############################################################################
 #                                                                            #
@@ -177,7 +177,7 @@ info "\t$output_dir/csv_files/ -> $db_dump $worker_nodes $file_transfer"
 info "\t$output_dir/simgrid_files/ -> XML files and $LFC_catalog"
 info "\t$output_dir/timings/ -> $real_times"
 
-mv -f simulate_*.sh Analysis_$workflow_dir.Rmd README $output_dir/
+mv -f run_simulations_*.sh  $output_dir/ #Analysis_$workflow_dir.Rmd README
 mv -f *.xml  $LFC_catalog $output_dir/simgrid_files
 mv -f $db_dump $worker_nodes $file_transfer $output_dir/csv_files
 mv -f $real_times $output_dir/timings
