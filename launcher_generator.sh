@@ -11,7 +11,7 @@ workflow_dir=${1:? name of workflow must passed as argument!}
 cheat=${2:-"no"}
 initial=${3:-"standalone"}
 
-output="simulate_${workflow_dir}_2.sh"
+output="run_simulations_${workflow_dir}.sh"
 deployment_file="deployment_$workflow_dir.xml"
 deployment_file2="deployment_${workflow_dir}_2.xml"
 
