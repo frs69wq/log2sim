@@ -1,8 +1,8 @@
 #! /bin/bash -u
 ##############################################################################
 # Copyright (c) Centre de Calcul de l'IN2P3 du CNRS, CREATIS                 #
-# Contributor(s) : Frédéric SUTER, Mohammad Mahdi BAZM (2015)                #
-#                                                                            #
+# Contributor(s) : Frédéric SUTER(2015-16, Mohammad Mahdi BAZM (2015),       #
+#                  Anchen CHAI (2016)                                        #
 # This program is free software; you can redistribute it and/or modify it    #
 # under the terms of the license (GNU LGPL) which comes with this code.      #
 ##############################################################################
@@ -66,7 +66,7 @@ echo -e '# Command lines arguments are:\n' \
         '# Number of merge jobs: '$number_of_merge_jobs'\n' \
         '# CPU merge time: '$cpu_merge_time'\n' \
         '# Events per second: '$events_per_sec'\n' \
-        '# version: 1 or 2\n' >> $output 
+        '# version: 1, 2, or 3\n' >> $output 
 
 echo -e 'platform_type=${1:-"all"}\n'>> $output
 echo -e 'verbose=${2:-""}\n'\
@@ -76,7 +76,7 @@ echo -e 'verbose=${2:-""}\n'\
         'else\n'\
         '\tverbose="'"--log=jmsg.thres:critical"'"\n'\
         'fi\n' >> $output
-
+echo -e 'version=3\n' >> $output
 
 echo -e 'flag="--cfg=network/crosstraffic:0"'>> $output
 # Order of argument: Platform Deployment TotalParticleNumber NmuberOfGateJob SOSTime NumberOfMergeJob cpuMergeTime eventsPerSec LogFile
@@ -88,8 +88,6 @@ echo 'params="simgrid_files/'${deployment_file}' \
 
 echo -e "\n" >> $output
 
-
-echo -e 'version=3\n' >> $output
 echo 'for platform in "10G_SE" "Avg_SE" "Max_SE" "Asym_Avg_SE" "Asym_Max_SE" "Avg_Site" "Max_Site" "Corr_Max_Site" "Avg_cluster" "Corr_Max_cluster" "Avg_cluster_bypass" "Corr_Max_cluster_bypass"
     do
       echo -e "\\tSimulate on AS  - version ${version}" 
@@ -100,11 +98,6 @@ echo 'for platform in "10G_SE" "Avg_SE" "Max_SE" "Asym_Avg_SE" "Asym_Max_SE" "Av
             2> csv_files/simulated_file_transfer_on_${platform}.csv
       sed -i '1d' csv_files/simulated_file_transfer_on_${platform}.csv        
     done' >> $output
-
-
-
-
-
 
 #give execution right to the generated file in .sh
 chmod +x $output
