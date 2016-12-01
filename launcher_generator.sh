@@ -1,8 +1,8 @@
 #! /bin/bash -u
 ##############################################################################
 # Copyright (c) Centre de Calcul de l'IN2P3 du CNRS, CREATIS                 #
-# Contributor(s) : Frédéric SUTER, Mohammad Mahdi BAZM (2015)                #
-#                                                                            #
+# Contributor(s) : Frédéric SUTER(2015-16, Mohammad Mahdi BAZM (2015),       #
+#                  Anchen CHAI (2016)                                        #
 # This program is free software; you can redistribute it and/or modify it    #
 # under the terms of the license (GNU LGPL) which comes with this code.      #
 ##############################################################################
@@ -11,7 +11,7 @@ workflow_dir=${1:? name of workflow must passed as argument!}
 cheat=${2:-"no"}
 initial=${3:-"standalone"}
 
-output="simulate_$workflow_dir.sh"
+output="simulate_${workflow_dir}_2.sh"
 deployment_file="deployment_$workflow_dir.xml"
 deployment_file2="deployment_${workflow_dir}_2.xml"
 
@@ -28,8 +28,8 @@ number_of_gate_jobs=$(grep gate $db_dump |wc -l)
 #     ${LOG2SIM_LOGS}/${workflow_dir}/workflow.out | awk 'END{print}' | \
 #     awk '{print $(NF-1)}')
 
-total_particle_number=$(awk '/] Initial number of particles:/''{print $NF}' \
-    ${LOG2SIM_LOGS}/${workflow_dir}/workflow.out)
+# total_particle_number=$(awk '/] Initial number of particles:/''{print $NF}' \
+#     ${LOG2SIM_LOGS}/${workflow_dir}/workflow.out)
 
 if [ $cheat != "no" ]
 then 
@@ -39,9 +39,9 @@ fi
 
 sos_time=300
 
-number_of_merge_jobs=$(awk '/] processor "merge" executed/''{print}' \
-    ${LOG2SIM_LOGS}/${workflow_dir}/workflow.out | awk 'END{print}' | \
-    awk '{print $(NF-1)}')
+# number_of_merge_jobs=$(awk '/] processor "merge" executed/''{print}' \
+#     ${LOG2SIM_LOGS}/${workflow_dir}/workflow.out | awk 'END{print}' | \
+#     awk '{print $(NF-1)}')
 
 if [ $cheat != "no" ]
 then
@@ -58,15 +58,15 @@ fi
 echo '#! /bin/bash -u' > $output
 
 echo -e '# Command lines arguments are:\n' \
-        '# Platform files:  [AS/mock]_platform_'$workflow_dir'.xml\n'\
-        '# Deployment file: '$deployment_file'\n' \
+        '# Platform files:  platform_'$workflow_dir'_x_x_lim.xml\n'\
+        '# Deployment file: '$deployment_file2'\n' \
         '# Initial number particles: '$total_particle_number'\n' \
         '# Number of gate jobs: '$number_of_gate_jobs'\n' \
         '# SoS time: '$sos_time'\n' \
         '# Number of merge jobs: '$number_of_merge_jobs'\n' \
         '# CPU merge time: '$cpu_merge_time'\n' \
         '# Events per second: '$events_per_sec'\n' \
-        '# version: 1 or 2\n' >> $output 
+        '# version: 1, 2, or 3\n' >> $output 
 
 echo -e 'platform_type=${1:-"all"}\n'>> $output
 echo -e 'verbose=${2:-""}\n'\
@@ -76,9 +76,9 @@ echo -e 'verbose=${2:-""}\n'\
         'else\n'\
         '\tverbose="'"--log=jmsg.thres:critical"'"\n'\
         'fi\n' >> $output
+echo -e 'version=3\n' >> $output
 
-echo -e 'version=2\n' >> $output
-
+echo -e 'flag="--cfg=network/crosstraffic:0"'>> $output
 # Order of argument: Platform Deployment TotalParticleNumber NmuberOfGateJob SOSTime NumberOfMergeJob cpuMergeTime eventsPerSec LogFile
 
 echo 'cmd="java -cp ${VIPSIM}/bin:${SIMGRID_PATH}/simgrid.jar \
@@ -88,53 +88,16 @@ echo 'params="simgrid_files/'${deployment_file}' \
 
 echo -e "\n" >> $output
 
-echo 'case $platform_type in 
-   "AS_Avg_Fatpipe"|"AS_Max_Shared"|"mock" )
-        platform_file="simgrid_files/${platform_type}_platform_'${workflow_dir}'.xml"
-        echo -e "\\tSimulate on ${platform_type}"
-        run=$cmd" "${platform_file}" "${params}
-        echo -e "\\t\\t$run"
-        $run 1> timings/simulated_time_on_${platform_type}_v${version}.csv \
-        2> csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
-        ;;
-   "all" )
-        for platform_type in "AS_Avg_Fatpipe" "AS_Max_Shared" "mock"
-        do
-           platform_file="simgrid_files/${platform_type}_platform_'${workflow_dir}'.xml"
-           echo -e "\\tSimulate on ${platform_type}"
-           run=$cmd" "${platform_file}" "${params}
-           echo -e "\\t\\t$run"
-           $run  1> timings/simulated_time_on_${platform_type}_v${version}.csv \
-           2> csv_files/simulated_file_transfer_on_${platform_type}_v${version}.csv
-        done
-        ;;
-    "AS" )
-       for platform_type_AS in "AS_Avg_Fatpipe" "AS_Max_Shared"
-        do
-            echo -e "\\tSimulate on AS  - version ${version}" 
-            platform_file="simgrid_files/${platform_type_AS}_platform_'${workflow_dir}'.xml"
-            run=$cmd" "${platform_file}" "${params}
-            echo -e "\\t\\t$run"
-            $run  1> timings/simulated_time_on_${platform_type_AS}_v${version}.csv \
-            2> csv_files/simulated_file_transfer_on_${platform_type_AS}_v${version}.csv
-        done   
-        ;;
-
-esac' >> $output
-
-echo -e 'version=3\n' >> $output
-echo 'if [ $platform_type == "AS" ]
-then 
-  for platform_type_AS in "AS_Avg_Fatpipe" "AS_Max_Shared"
-  do
+echo 'for platform in "10G_SE" "Avg_SE" "Max_SE" "Asym_Avg_SE" "Asym_Max_SE" "Avg_Site" "Max_Site" "Corr_Max_Site" "Avg_cluster" "Corr_Max_cluster" "Avg_cluster_bypass" "Corr_Max_cluster_bypass"
+    do
       echo -e "\\tSimulate on AS  - version ${version}" 
-      platform_file="simgrid_files/${platform_type_AS}_platform_'${workflow_dir}'.xml"
-      run=$cmd" ${platform_file} simgrid_files/'${deployment_file2}' '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose}"
+      platform_file="simgrid_files/platform_'${workflow_dir}'_${platform}.xml"
+      run=$cmd" ${platform_file} simgrid_files/'${deployment_file2}' '${total_particle_number}' '${number_of_gate_jobs}' '${sos_time}' '${number_of_merge_jobs}' '${cpu_merge_time}' '${events_per_sec}' ${version} 10000000 ${verbose} ${flag}"
       echo -e "\\t\\t$run"
-      $run  1> timings/simulated_time_on_${platform_type_AS}_v${version}.csv \
-            2> csv_files/simulated_file_transfer_on_${platform_type_AS}_v${version}.csv
-  done   
-fi' >> $output
+      $run  1> timings/simulated_time_on_${platform}.csv \
+            2> csv_files/simulated_file_transfer_on_${platform}.csv
+      sed -i '1d' csv_files/simulated_file_transfer_on_${platform}.csv        
+    done' >> $output
 
 #give execution right to the generated file in .sh
 chmod +x $output
