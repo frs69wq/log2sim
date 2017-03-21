@@ -125,7 +125,7 @@ for (version in 1:2){
     t$closeTag()
   }
   
-  t$addTag("process", attrs=c(host=merge_arguments$Source, fun="Merge"), close=FALSE)
+  t$addTag("process", attrs=c(host=merge_arguments$Source, fun="Merge",start_time=merge_arguments$DownloadStartTime), close=FALSE)
   t$addTag("argument", attrs=c(value=merge_arguments$JobId))
   t$addTag("argument", attrs=c(value=merge_arguments$ComputeDuration))
   t$addTag("argument", attrs=c(value=merge_arguments$FileSize))
