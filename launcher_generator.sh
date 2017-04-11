@@ -74,7 +74,7 @@ echo -e 'verbose=${2:-""}\n'\
         'then\n'\
         '\tverbose="'"--log=root.fmt:[%12.6r]%e(%3i:%10P@%40h)%e%m%n"'"\n'\
         'else\n'\
-        '\tverbose="'"--log=jmsg.thres:critical"'"\n'\
+        '\tverbose="'"--log=java.thres:critical"'"\n'\
         'fi\n' >> $output
 echo -e 'version=3\n' >> $output
 
