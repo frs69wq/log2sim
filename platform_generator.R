@@ -301,7 +301,7 @@ get_bandwidths_by_ClusterLink <- function(Transfers){
   df <- ddply(Transfers, c("ClusterLink","File_Type"), summarize,
               Avg=round(mean(Bandwidth)), Corr_Max=round(max(Corr_Bandwidth_by_ClusterLink)))
   release <- subset(df, File_Type == 'Release')
-  others <- ddply(subset(df, !(ClusterLink %in% release$ClusterLink)), .(ClusterLink), function(x) x[which.max(x$Max),])
+  others <- ddply(subset(df, !(ClusterLink %in% release$ClusterLink)), .(ClusterLink), function(x) x[which.max(x$Corr_Max),])
   rbind(release,others)
 }
 ################################################## Route selection #####################################################
@@ -384,7 +384,7 @@ select_bypass_routes <- function(Clusters){
   cluster_to_SE$Link <- paste(cluster_to_SE$src, site_name,cluster_to_SE$dst, sep='-')
   cluster_to_SE$ReverseLink <- paste(site_name, cluster_to_SE$dst, cluster_to_SE$src, sep='-')
   cluster_to_SE$SiteLink <- paste0(cluster_to_SE$src,"_link")
-  cluster_to_SE$ReverseSiteLink <- paste0(cluster_to_SE$src,"_link_to")
+  cluster_to_SE$LimiterLink <- paste0(cluster_to_SE$dst,"_link_to")
   cluster_to_SE$src <- as.character(cluster_to_SE$src)
   cluster_to_SE$dst <- as.character(cluster_to_SE$dst)
   cluster_to_SE$gw_src <- paste0(cluster_to_SE$src, "_router")
