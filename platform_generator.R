@@ -1,7 +1,7 @@
 #!/usr/bin/Rscript
 ########################################################################################################################
 # Copyright (c) Centre de Calcul de l'IN2P3 du CNRS, CREATIS                                                           #
-# Contributor(s) : Frédéric SUTER (2015-2016), Anchen CHAI (2016)                                                      #
+# Contributor(s) : Frédéric SUTER (2015-2017), Anchen CHAI (2016)                                                      #
 #                                                                                                                      #
 # This program is free software; you can redistribute it and/or modify it under the terms of the license (GNU LGPL)    #
 # which comes with this code.                                                                                          #
@@ -204,7 +204,8 @@ correct_bandwidth <-function(df){
       cur_concurrency_by_SE <- cur_concurrency_by_Site      <- 0
       cur_concurrency_by_Link <- cur_concurrency_by_Cluster <- 0
       cur_concurrency_by_ClusterLink                        <- 0
-      if (nrow(others_by_Link) > 1) {
+       if (nrow(others_by_SE) > 1 | nrow(others_by_Site) > 1 | nrow(others_by_Link) > 1 | nrow(others_by_Cluster) > 1 |
+           nrow(others_by_ClusterLink) > 1) {
         # This makes sense only if there is concurrency
         for(s in 1: n_interval){
           # set the end of the current interval
