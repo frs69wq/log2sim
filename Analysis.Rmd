@@ -14,6 +14,9 @@ library(plyr)
 get_suffix <- function(x) {
   tail(strsplit(as.character(x),"[.]")[[1]], n=1)
 }
+get_prefix <- function(x) {
+  head(strsplit(as.character(x),"[.]")[[1]], n=1)
+}
 ```
 
 ```{r echo=FALSE, cache=TRUE}
@@ -24,6 +27,8 @@ workers$MIPS <-as.numeric(sub("Mf", "", workers$MIPS))
 
 # Add a column to store the suffix of local SE
 workers$SESuffix<-sapply(workers$CloseSE, get_suffix)
+#shorten the SE name by keeping their prefix only, for the sake of readibility 
+workers$CloseSE<-sapply(workers$CloseSE, get_prefix)
 ```
 
 ```{r echo=FALSE, cache=TRUE}
@@ -44,9 +49,25 @@ transfers$dst_suffix<-sapply(transfers$Destination,  get_suffix)
 ```
 
 ```{r echo=FALSE, cache=TRUE}
-upload_tests <- transfers[transfers$UpDown == 0,]
-uploads <- transfers[transfers$UpDown == 1,]
-downloads <- transfers[transfers$UpDown == 2,]
+db <- read.csv('csv_files/db_dump.csv', header = TRUE,sep=' ')
+```
+
+```{r echo=FALSE}
+upload_tests       <- subset(transfers, UpDown == 0)
+uploads            <- subset(transfers, UpDown == 1)
+downloads          <- subset(transfers, UpDown == 2)
+gate_downloads     <- subset(transfers,JobType == "gate" & UpDown == 2)
+
+#shorten the SE name by keeping their prefix only, for the sake of readibility 
+upload_tests$Destination<-sapply(upload_tests$Destination, get_prefix)
+uploads$Destination<-sapply(uploads$Destination, get_prefix)
+downloads$Source<-sapply(downloads$Source, get_prefix)
+gate_downloads$Source<-sapply(gate_downloads$Source, get_prefix)
+gate_downloads$Destination<-sapply(gate_downloads$Destination, get_prefix)
+
+gate_downloads$Bandwidth <- gate_downloads$FileSize/(pmax(0.1,(gate_downloads$Time-1)))
+gate_downloads$SE_SITE <- paste(gate_downloads$Source,"_",gate_downloads$SiteName)
+gate_downloads$End <- gate_downloads$Start <- gate_downloads$DownloadDuration <- gate_downloads$DownloadStartTime <- 0
 ```
 
 ```{r echo=FALSE, cache=TRUE}
@@ -108,6 +129,40 @@ upload_step$End <- timings$UploadStartTime+timings$UploadDuration
 upload_step$Step <-"Upload"
 
 gantt <- rbind(queuing_step,download_step,computing_step, upload_step)
+```
+
+```{r echo=FALSE, cache=TRUE}
+gate_downloads$JobSeq <- 1
+for(j in 0:(nrow(timings)-2)){ #skipped the merge job on last line
+  for(k in 1:3){
+    if(k==1){
+      gate_downloads[j*3+k,]$Start <- round(timings[j+1,]$DownloadStartTime)
+    } else {
+      gate_downloads[j*3+k,]$Start <- round(gate_downloads[j*3+k-1,]$End)
+    } 
+    gate_downloads[j*3+k,]$JobSeq <- timings[j+1,]$JobSeq
+    gate_downloads[j*3+k,]$End <- gate_downloads[j*3+k,]$Start + round(gate_downloads[j*3+k,]$Time)
+    gate_downloads[j*3+k,]$DownloadStartTime <- timings[j+1,]$DownloadStartTime
+    gate_downloads[j*3+k,]$DownloadDuration <- timings[j+1,]$DownloadDuration
+  }
+}
+
+gate_downloads <- gate_downloads[order(gate_downloads$SE_SITE, gate_downloads$DownloadStartTime,gate_downloads$DownloadDuration),]
+gate_downloads$y <- cur_y <- 1 ; cur_start <- gate_downloads[1,]$DownloadStartTime ; 
+cur_id <- gate_downloads[1,]$JobId ; cur_link <- gate_downloads[1,]$SE_SITE
+
+for (j in 2:nrow(gate_downloads)){
+  if (gate_downloads[j,]$SE_SITE != cur_link){
+   cur_link <- gate_downloads[j,]$SE_SITE
+   cur_y <-1 
+  }  
+  if (gate_downloads[j,]$DownloadStartTime != cur_start || gate_downloads[j,]$JobId != cur_id){
+    cur_y <- cur_y+1
+    cur_start <- gate_downloads[j,]$DownloadStartTime
+    cur_id <- gate_downloads[j,]$JobId
+  }  
+  gate_downloads[j,]$y <- cur_y
+}
 ```
 
 ```{r echo=FALSE, cache=TRUE}
@@ -179,7 +234,7 @@ ggplot(workers, aes(x=SiteName, y=CloseSE)) +
   geom_point(data=usedSE, aes(color="Used"), size=2.5, 
              position=position_jitter(width=0.2,height=0.1)) + 
   scale_color_discrete(breaks=c("Declared", "Used"), labels=c("Declared", "Used"), name="") +
-  facet_grid(SESuffix~Country, scales="free") + xlab("") + ylab("Prefered Storage Element") +
+  facet_grid(SESuffix~Country, scales="free") + xlab("") + ylab("Preferred Storage Element") +
   theme(axis.text.x = element_text(angle = 50, hjust = 1)) + 
   theme(legend.position="top")
 ```
@@ -215,6 +270,20 @@ ggplot(downloads[downloads$JobType == "gate",], aes(x=Source, y=Time, fill=facto
   guides(fill=FALSE)
 ```
 
+```{r echo=FALSE,fig.height=10}
+ggplot(gate_downloads)+ theme(legend.position="top")+
+  geom_segment(aes(x=Start, xend=End, y=JobSeq, yend=JobSeq, color=factor(FileSize))) +
+  facet_wrap(~SE_SITE, ncol=2, scales="free_x")+ xlab("Time (in seconds)") + ylab("Jobs") +
+  scale_color_discrete(name="File Size (in Bytes)")
+```
+
+```{r echo=FALSE,fig.height=10}
+ggplot(gate_downloads)+ theme(legend.position="top")+
+  geom_segment(aes(x=Start, xend=End, y=JobSeq, yend=JobSeq, color=factor(Source))) +
+  facet_wrap(~Destination, ncol=2)+ xlab("Time (in seconds)") + ylab("Jobs") +
+  scale_color_discrete(name="SE") + guides(fill = guide_legend(nrow = 2))
+```
+
 \newpage
 
 ### Distribution of GATE upload durations (in seconds)
@@ -225,7 +294,7 @@ summary(uploads[uploads$JobId != mergeId,]$Time)
 ```{r echo=FALSE,fig.height=7.5}
 ggplot(uploads[uploads$JobId != mergeId,], aes(x=FileSize, y=Time)) + geom_point() + 
   facet_wrap(~Destination, ncol=1, scales = "free_y") + 
-  ylab ("Duration (in seconds") + xlab ("File Size (in Bytes)")
+  ylab ("Duration (in seconds)") + xlab ("File Size (in Bytes)")
 
 ```
 
@@ -246,7 +315,7 @@ summary(tail(downloads[downloads$JobId == mergeId,], -2)$Time)
 # skip the first two downloads (wrapper and input files)
 ggplot(tail(downloads[downloads$JobId == mergeId,], -2), aes(x=FileSize, y=Time)) + geom_point() + 
   facet_wrap(~Source, ncol=1, scales = "free_y") + 
-  ylab ("Duration (in seconds") + xlab ("File Size (in Bytes)")
+  ylab ("Duration (in seconds)") + xlab ("File Size (in Bytes)")
 
 ```
 
