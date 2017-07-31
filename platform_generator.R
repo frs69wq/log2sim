@@ -110,11 +110,11 @@ set_file_types <- function(df){
     df[j,]$File_Type <-switch (j%%5, "Upload Test", "Partial Upload", "Wrapper", "Release")
     if (j%%5==0)
       df[j,]$File_Type <- "Input"
-    }
+  }
   for (i in 1:5) {
-     j<-5*gate_count+i
-     df[j,]$File_Type <-switch (i, "Upload Test", "Partial Upload", "Small Upload", "Release", "Input")
-   }
+    j<-5*gate_count+i
+    df[j,]$File_Type <-switch (i, "Upload Test", "Partial Upload", "Small Upload", "Release", "Input")
+  }
   df
 }
 
@@ -204,8 +204,8 @@ correct_bandwidth <-function(df){
       cur_concurrency_by_SE <- cur_concurrency_by_Site      <- 0
       cur_concurrency_by_Link <- cur_concurrency_by_Cluster <- 0
       cur_concurrency_by_ClusterLink                        <- 0
-       if (nrow(others_by_SE) > 1 | nrow(others_by_Site) > 1 | nrow(others_by_Link) > 1 | nrow(others_by_Cluster) > 1 |
-           nrow(others_by_ClusterLink) > 1) {
+      if (nrow(others_by_SE) > 1 | nrow(others_by_Site) > 1 | nrow(others_by_Link) > 1 | nrow(others_by_Cluster) > 1 |
+          nrow(others_by_ClusterLink) > 1) {
         # This makes sense only if there is concurrency
         for(s in 1: n_interval){
           # set the end of the current interval
@@ -244,17 +244,17 @@ correct_bandwidth <-function(df){
 ################################################## Bandwidth aggregation methods #######################################
 get_bandwidths_by_Site <- function(Transfers){
   subset(ddply(Transfers, c("SiteName", "File_Type"), summarize, Default="100Gbps",
-               Max=paste0(round(max(Bandwidth)/.97),"bps"),
-               Corr_Max=paste0(round(max(Corr_Bandwidth_by_Site)/.97),"bps")),
+               Max=paste0(max(1000,round(max(Bandwidth)/.97)),"bps"),
+               Corr_Max=paste0(max(1000,round(max(Corr_Bandwidth_by_Site)/.97)),"bps")),
          File_Type == 'Release', select=c("SiteName", "Default", "Max", "Corr_Max"))
 }
 
 get_bandwidths_by_SE <- function(Transfers){
   to_SE <- ddply(Transfers[Transfers$UpDown != 2,], c("Destination"), summarize,
-              Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)))
+                 Avg=round(mean(Bandwidth, trim=0.25)), Max=round(max(Bandwidth)))
   names(to_SE) = c("SE","Avg_to","Max_to")
   from_SE <- ddply(Transfers[Transfers$UpDown == 2,], c("Source"), summarize,
-                   Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)))
+                   Avg=round(mean(Bandwidth, trim=0.25)), Max=round(max(Bandwidth)))
   names(from_SE) = c("SE","Avg_from","Max_from")
   df <- merge(to_SE, from_SE, all=TRUE)
   df$Avg <- apply(df[,c(2,4)], 1, function(s) if (is.na(s[1])) s[2] else if (is.na(s[2])) s[1] else (s[1]+s[2])/2)
@@ -265,13 +265,15 @@ get_bandwidths_by_SE <- function(Transfers){
 
 get_bandwidths_by_SE_and_type <- function(Transfers){
   to_SE <- ddply(Transfers[Transfers$UpDown != 2,], c("Destination", "File_Type"), summarize,
-                 Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)), Corr_Max = round(max(Corr_Bandwidth_by_SE)))
+                 Avg=round(mean(Bandwidth, trim=0.25)), Max=round(max(Bandwidth)),
+                 Corr_Max = round(max(Corr_Bandwidth_by_SE)))
   names(to_SE) = c("SE","File_Type","Avg_to","Max_to", "Corr_Max_to")
   upload <- subset(to_SE, File_Type == 'Partial Upload')
   others <- ddply(subset(to_SE, !(SE %in% upload$SE)), .(SE), function(x) x[which.max(x$Max_to),])
   to_SE <- rbind(upload,others)
   from_SE <- ddply(Transfers[Transfers$UpDown == 2,], c("Source","File_Type"), summarize,
-                   Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)), Corr_Max = round(max(Corr_Bandwidth_by_SE)))
+                   Avg=round(mean(Bandwidth, trim=0.25)), Max=round(max(Bandwidth)),
+                   Corr_Max = round(max(Corr_Bandwidth_by_SE)))
   names(from_SE) = c("SE","File_Type","Avg_from","Max_from", "Corr_Max_from")
   release <- subset(from_SE, File_Type == c('Release'))
   others <- ddply(subset(from_SE, !(SE %in% release$SE)), .(SE), function(x) x[which.max(x$Max_from),])
@@ -282,7 +284,7 @@ get_bandwidths_by_SE_and_type <- function(Transfers){
 }
 
 get_bandwidths_by_Link <- function(Transfers){
-  df <- ddply(Transfers, c("Link","File_Type"), summarize, count=length(Link), Avg=round(mean(Bandwidth)),
+  df <- ddply(Transfers, c("Link","File_Type"), summarize, count=length(Link), Avg=round(mean(Bandwidth, trim=0.25)),
               Max=round(max(Bandwidth)),Corr_Max=round(max(Corr_Bandwidth_by_Link)))
   release <- subset(df, File_Type == 'Release')
   others <- ddply(subset(df, !(Link %in% release$Link)), .(Link), function(x) x[which.max(x$Max),])
@@ -290,17 +292,17 @@ get_bandwidths_by_Link <- function(Transfers){
 }
 
 get_bandwidths_by_Cluster <- function(Transfers){
-  df <- ddply(Transfers, c("Cluster","File_Type"), summarize, count=length(Cluster),
-              Avg=round(mean(Bandwidth)), Max=round(max(Bandwidth)),
+  df <- ddply(Transfers, c("Cluster","File_Type"), summarize,
+              Avg=round(mean(Bandwidth, trim=0.25)), Max=round(max(Bandwidth)),
               Corr_Max=round(max(Corr_Bandwidth_by_Cluster)))
   release <- subset(df, File_Type == 'Release')
   others <- ddply(subset(df, !(Cluster %in% release$Cluster)), .(Cluster), function(x) x[which.max(x$Max),])
-  subset(rbind(release,others), select=-c(File_Type, count))
+  subset(rbind(release,others), select=-c(File_Type))
 }
 
 get_bandwidths_by_ClusterLink <- function(Transfers){
   df <- ddply(Transfers, c("ClusterLink","File_Type"), summarize,
-              Avg=round(mean(Bandwidth)), Corr_Max=round(max(Corr_Bandwidth_by_ClusterLink)))
+              Avg=round(mean(Bandwidth, trim=0.25)), Corr_Max=round(max(Corr_Bandwidth_by_ClusterLink)))
   release <- subset(df, File_Type == 'Release')
   others <- ddply(subset(df, !(ClusterLink %in% release$ClusterLink)), .(ClusterLink), function(x) x[which.max(x$Corr_Max),])
   rbind(release,others)
@@ -478,11 +480,12 @@ Site_AS_with_cluster_links <- function(df, bb_bw, c_bw){
                                         latency="0"))
   cluster_links   <- apply(df, 1, function(c){
     link <- newXMLNode("link",attrs=c(id=paste0(c[1],"_link"),
-                              bandwidth=paste0(round(as.numeric(c[c_bw])/0.97),"bps"), latency="750us"))
+                                      bandwidth=paste0(max(1000,round(as.numeric(c[c_bw])/0.97)),"bps"),
+                                      latency="750us"))
     if (c_bw == 10) # Avg bandwidth
       addAttributes(link, sharing_policy="FATPIPE")
     link
-    })
+  })
   routes     <-  apply(df, 1, function(c)
     newXMLNode("ASroute", attrs=c(src=as.character(c[1]), dst=paste("AS",site_name, "gw", sep="_"),
                                   gw_src=paste0(c[1], "_router"),
@@ -493,11 +496,12 @@ Site_AS_with_cluster_links <- function(df, bb_bw, c_bw){
 }
 
 Shared_link <- function(x){
-  newXMLNode("link", attrs= c(id=as.character(x[1]), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"), latency="500us"))
+  newXMLNode("link", attrs= c(id=as.character(x[1]), bandwidth=paste0(max(1000,round(as.numeric(x[2])/.97)),"bps"),
+                              latency="500us"))
 }
 
 Fatpipe_link <- function(x){
-  newXMLNode("link", attrs= c(id=as.character(x[1]), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
+  newXMLNode("link", attrs= c(id=as.character(x[1]), bandwidth=paste0(max(1000,round(as.numeric(x[2])/.97)),"bps"),
                               latency="500us",sharing_policy="FATPIPE"))
 }
 
@@ -612,42 +616,50 @@ Mock_10G_shared_links <- apply(bandwidth_by_SE[,c(1,4)], 1, function(x){
   newXMLNode("link", attrs= c(id=paste0(x[1],"_link"), bandwidth=paste0(as.numeric(x[2]),"bps"), latency="750us"))})
 
 Avg_shared_links <- apply(bandwidth_by_SE[,c(1,2)], 1, function(x){
-  newXMLNode("link", attrs= c(id=paste0(x[1],"_link"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
+  newXMLNode("link", attrs= c(id=paste0(x[1],"_link"), bandwidth=paste0(max(1000,round(as.numeric(x[2])/.97)),"bps"),
                               latency="750us", sharing_policy = "FATPIPE"))})
 
 Max_shared_links <- apply(bandwidth_by_SE[,c(1,3)], 1, function(x){
-  newXMLNode("link", attrs= c(id=paste0(x[1],"_link"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
+  newXMLNode("link", attrs= c(id=paste0(x[1],"_link"), bandwidth=paste0(max(1000,round(as.numeric(x[2])/.97)),"bps"),
                               latency="750us"))})
 
 Asym_Avg_shared_links <-
   c(apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Avg_to)),c(1,2)], 1, function(x){
-    newXMLNode("link", attrs= c(id=paste0(x[1],"_link_to"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
+    newXMLNode("link", attrs= c(id=paste0(x[1],"_link_to"),
+                                bandwidth=paste0(max(1000,round(as.numeric(x[2])/.97)),"bps"),
                                 latency="750us", sharing_policy = "FATPIPE"))}),
     apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Avg_from)),c(1,5)], 1, function(x){
-      newXMLNode("link", attrs= c(id=paste0(x[1],"_link_from"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
+      newXMLNode("link", attrs= c(id=paste0(x[1],"_link_from"),
+                                  bandwidth=paste0(max(1000,round(as.numeric(x[2])/.97)),"bps"),
                                   latency="750us", sharing_policy = "FATPIPE"))}))
 
 Asym_Max_shared_links <-
   c(apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Max_to)),c(1,3)], 1, function(x){
-    newXMLNode("link", attrs= c(id=paste0(x[1],"_link_to"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
+    newXMLNode("link", attrs= c(id=paste0(x[1],"_link_to"),
+                                bandwidth=paste0(max(1000,round(as.numeric(x[2])/.97)),"bps"),
                                 latency="750us"))}),
     apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Max_from)),c(1,6)], 1, function(x){
-      newXMLNode("link", attrs= c(id=paste0(x[1],"_link_from"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
+      newXMLNode("link", attrs= c(id=paste0(x[1],"_link_from"),
+                                  bandwidth=paste0(max(1000,round(as.numeric(x[2])/.97)),"bps"),
                                   latency="750us"))}))
 SE_Max_limiters <-
   c(apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Max_to)),c(1,3)], 1, function(x){
-    newXMLNode("link", attrs= c(id=paste0(x[1],"_link_to"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
+    newXMLNode("link", attrs= c(id=paste0(x[1],"_link_to"),
+                                bandwidth=paste0(max(1000,round(as.numeric(x[2])/.97)),"bps"),
                                 latency="0"))}),
     apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Max_from)),c(1,6)], 1, function(x){
-      newXMLNode("link", attrs= c(id=paste0(x[1],"_link_from"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
+      newXMLNode("link", attrs= c(id=paste0(x[1],"_link_from"),
+                                  bandwidth=paste0(max(1000,round(as.numeric(x[2])/.97)),"bps"),
                                   latency="0"))}))
 
 SE_Corr_Max_limiters <-
   c(apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Corr_Max_to)),c(1,4)], 1, function(x){
-    newXMLNode("link", attrs= c(id=paste0(x[1],"_link_to"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
+    newXMLNode("link", attrs= c(id=paste0(x[1],"_link_to"),
+                                bandwidth=paste0(max(1000,round(as.numeric(x[2])/.97)),"bps"),
                                 latency="0"))}),
     apply(bandwidth_by_SE_and_type[!(is.infinite(bandwidth_by_SE_and_type$Corr_Max_from)),c(1,7)], 1, function(x){
-      newXMLNode("link", attrs= c(id=paste0(x[1],"_link_from"), bandwidth=paste0(round(as.numeric(x[2])/.97),"bps"),
+      newXMLNode("link", attrs= c(id=paste0(x[1],"_link_from"),
+                                  bandwidth=paste0(max(1000,round(as.numeric(x[2])/.97)),"bps"),
                                   latency="0"))}))
 
 Avg_links              <- apply(bandwidth_by_Link[,c(1,4)], 1, Fatpipe_link)
@@ -686,5 +698,5 @@ export_XML(all_site_ASes_with_corr_max_cluster_links, c(SE_Corr_Max_limiters, Co
 export_bypass_XML(all_site_ASes_with_avg_cluster_links, Avg_links, Cluster_Avg_links,Sites_to_from_SE_routes,
                   Clusters_to_from_SE_Avg_bypass_routes, "Avg_cluster_bypass")
 export_bypass_XML(all_site_ASes_with_corr_max_cluster_links, c(SE_Corr_Max_limiters, Corr_Max_links),
-                 Cluster_Corr_Max_links,Limited_routes_to_from_SE, Clusters_to_from_SE_Max_bypass_routes,
-                 "Corr_Max_cluster_bypass")
+                  Cluster_Corr_Max_links,Limited_routes_to_from_SE, Clusters_to_from_SE_Max_bypass_routes,
+                  "Corr_Max_cluster_bypass")
