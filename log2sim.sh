@@ -163,7 +163,7 @@ README
 ##############################################################################
 
 info "Moving produced files in ../results/$workflow_dir"
-output_dir="../results/$workflow_dir"
+output_dir="../Work/$workflow_dir"
 if [ ! -d $output_dir ]
 then
     mkdir $output_dir
